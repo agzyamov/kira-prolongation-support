@@ -66,46 +66,46 @@ Integration & Polish (T027-T030)
 
 ---
 
-## Phase 3.2: Tests First (TDD) - 6 tasks [PARALLEL]
+## Phase 3.2: Tests First (TDD) - 6 tasks [PARALLEL] ✅ COMPLETE
 
 **CRITICAL**: These tests MUST be written and MUST FAIL before ANY implementation
 
-- [ ] **T005** [P] - Test: Exchange rate calculations
+- [x] **T005** [P] - Test: Exchange rate calculations
   - Write tests for USD conversion calculations
   - Test monthly average calculation
   - Test date range handling
   - File: `/Users/rustemagziamov/kira-prolongation-support/tests/test_calculations.py`
   - **Expected**: Tests fail (no implementation yet)
 
-- [ ] **T006** [P] - Test: Conditional rental agreement logic
+- [x] **T006** [P] - Test: Conditional rental agreement logic
   - Test conditional pricing rules evaluation
   - Test: "if rate < 40 then 35000" logic
   - Test multiple conditions
   - File: `/Users/rustemagziamov/kira-prolongation-support/tests/test_conditional_agreements.py`
   - **Expected**: Tests fail (no implementation yet)
 
-- [ ] **T007** [P] - Test: Percentage change calculations
+- [x] **T007** [P] - Test: Percentage change calculations
   - Test rent increase percentage calculations
   - Test TL vs USD comparison logic
   - Test edge cases (zero values, negative)
   - File: `/Users/rustemagziamov/kira-prolongation-support/tests/test_calculations.py` (add to T005 file)
   - **Expected**: Tests fail (no implementation yet)
 
-- [ ] **T008** [P] - Test: Exchange rate service with mocks
+- [x] **T008** [P] - Test: Exchange rate service with mocks
   - Mock HTTP requests to TCMB and backup API
   - Test fallback logic when TCMB fails
   - Test caching behavior
   - File: `/Users/rustemagziamov/kira-prolongation-support/tests/test_exchange_rates.py`
   - **Expected**: Tests fail (no implementation yet)
 
-- [ ] **T009** [P] - Test: Screenshot parser with sample images
+- [x] **T009** [P] - Test: Screenshot parser with sample images
   - Create 2-3 mock screenshot images with known prices
   - Test price extraction regex patterns
   - Test Turkish number formatting (35.000 TL)
   - File: `/Users/rustemagziamov/kira-prolongation-support/tests/test_screenshot_parser.py`
   - **Expected**: Tests fail (no implementation yet)
 
-- [ ] **T010** [P] - Test: Data validation rules
+- [x] **T010** [P] - Test: Data validation rules
   - Test date validation (start < end)
   - Test amount validation (> 0)
   - Test exchange rate validation
