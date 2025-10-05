@@ -1,17 +1,17 @@
 <!--
 Sync Impact Report:
-Version change: v1.2.0 → v1.3.0
+Version change: v1.4.0 → v1.4.1
 Changes:
-  - Added Principle VI: Test-Driven Bug Fixes
+  - Updated Principle VII: Latest Stable Dependencies to specify Streamlit 1.50.0
   - No existing principles modified
 Added sections:
-  - New Principle VI
+  - None
 Removed sections:
   - None
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md - no changes needed (testing already covered)
-  ✅ .specify/templates/spec-template.md - no changes needed (testing practices)
-  ✅ .specify/templates/tasks-template.md - no changes needed (testing tasks already included)
+  ✅ .specify/templates/plan-template.md - no changes needed (dependency management already covered)
+  ✅ .specify/templates/spec-template.md - no changes needed (dependency requirements)
+  ✅ .specify/templates/tasks-template.md - no changes needed (dependency tasks already included)
 Follow-up TODOs: None
 -->
 
@@ -41,6 +41,11 @@ When a user reports a bug, MUST write a unit test that reproduces the bug first,
 
 **Rationale**: User-reported bugs represent real-world failure scenarios that automated tests missed. Capturing them as tests ensures they never return silently and builds confidence in the codebase over time.
 
+### VII. Latest Stable Dependencies
+Pin all dependencies to their latest stable releases as of September 2025. Use specific version numbers in requirements.txt, not version ranges. Use Streamlit 1.50.0 as the web framework. Regularly update dependencies to maintain security patches and bug fixes while ensuring compatibility.
+
+**Rationale**: Specific version pinning ensures reproducible builds and prevents unexpected breaking changes from automatic updates. Using September 2025 as the baseline ensures we start with recent, well-tested versions that include the latest security patches and performance improvements. Streamlit 1.50.0 provides the latest features and stability for the web interface.
+
 ## Governance
 
 This is a personal project. These principles are guidelines, not laws. Change them whenever they stop being helpful.
@@ -50,4 +55,4 @@ This is a personal project. These principles are guidelines, not laws. Change th
 - A principle becomes annoying instead of helpful
 - You learn something that changes your approach
 
-**Version**: 1.3.0 | **Ratified**: 2025-10-05 | **Last Amended**: 2025-10-05
+**Version**: 1.4.1 | **Ratified**: 2025-10-05 | **Last Amended**: 2025-10-05
