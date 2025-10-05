@@ -10,6 +10,7 @@ from .validators import (
     validate_year,
     validate_confidence
 )
+from .chart_generator import ChartGenerator
 
 __all__ = [
     "ValidationError",
@@ -19,5 +20,6 @@ __all__ = [
     "validate_month",
     "validate_year",
     "validate_confidence",
+    "ChartGenerator",
 ]
 

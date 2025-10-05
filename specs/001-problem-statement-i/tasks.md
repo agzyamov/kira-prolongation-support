@@ -203,9 +203,9 @@ Integration & Polish (T027-T030)
 
 ---
 
-## Phase 3.6: Utilities (2 tasks) [PARALLEL]
+## Phase 3.6: Utilities (2 tasks) [PARALLEL] ✅ COMPLETE
 
-- [ ] **T022** [P] - Implement ChartGenerator utility
+- [x] **T022** [P] - Implement ChartGenerator utility
   - Create Plotly chart generation functions:
     - TL vs USD line chart over time
     - Payment comparison bar chart
@@ -215,7 +215,7 @@ Integration & Polish (T027-T030)
   - File: `/Users/rustemagziamov/kira-prolongation-support/src/utils/chart_generator.py`
   - **Dependencies**: None (pure utility)
 
-- [ ] **T023** [P] - Implement Validators utility
+- [x] **T023** [P] - Implement Validators utility
   - Input validation functions
   - Date validation helpers
   - Amount validation helpers
