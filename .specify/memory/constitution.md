@@ -1,17 +1,17 @@
 <!--
 Sync Impact Report:
-Version change: v1.4.0 → v1.4.1
+Version change: v1.4.1 → v1.5.0
 Changes:
-  - Updated Principle VII: Latest Stable Dependencies to specify Streamlit 1.50.0
+  - Added Principle VIII: Specify Command Branch Management
   - No existing principles modified
 Added sections:
-  - None
+  - New Principle VIII
 Removed sections:
   - None
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md - no changes needed (dependency management already covered)
-  ✅ .specify/templates/spec-template.md - no changes needed (dependency requirements)
-  ✅ .specify/templates/tasks-template.md - no changes needed (dependency tasks already included)
+  ✅ .specify/templates/plan-template.md - no changes needed (branch management not applicable to planning)
+  ✅ .specify/templates/spec-template.md - no changes needed (spec creation already handles branch management)
+  ✅ .specify/templates/tasks-template.md - no changes needed (task execution not affected by branch management)
 Follow-up TODOs: None
 -->
 
@@ -46,6 +46,11 @@ Pin all dependencies to their latest stable releases as of September 2025. Use s
 
 **Rationale**: Specific version pinning ensures reproducible builds and prevents unexpected breaking changes from automatic updates. Using September 2025 as the baseline ensures we start with recent, well-tested versions that include the latest security patches and performance improvements. Streamlit 1.50.0 provides the latest features and stability for the web interface.
 
+### VIII. Specify Command Branch Management
+The `/specify` command MUST continue working on the current specification branch until it is merged to main. Only create new feature branches after the current specification has been merged to main. This prevents branch proliferation and maintains a clean development workflow.
+
+**Rationale**: Creating multiple specification branches before completing and merging the current one leads to confusion and scattered work. This principle ensures focus on completing one specification at a time and maintains a linear development progression.
+
 ## Governance
 
 This is a personal project. These principles are guidelines, not laws. Change them whenever they stop being helpful.
@@ -55,4 +60,4 @@ This is a personal project. These principles are guidelines, not laws. Change th
 - A principle becomes annoying instead of helpful
 - You learn something that changes your approach
 
-**Version**: 1.4.1 | **Ratified**: 2025-10-05 | **Last Amended**: 2025-10-05
+**Version**: 1.5.0 | **Ratified**: 2025-10-05 | **Last Amended**: 2025-10-05

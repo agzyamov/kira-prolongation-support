@@ -234,4 +234,4 @@ directories captured above]
 - [ ] Complexity deviations documented
 
 ---
-*Based on Constitution v1.4.1 - See `.specify/memory/constitution.md`*
+*Based on Constitution v1.5.0 - See `.specify/memory/constitution.md`*
