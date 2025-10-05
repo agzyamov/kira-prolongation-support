@@ -1,110 +1,50 @@
-<!--
-Sync Impact Report:
-Version change: [TEMPLATE] → v1.0.0
-Changes:
-  - Initial constitution created
-  - Principles: 5 pragmatic principles focused on simplicity
-  - Added sections: Practical Approach, Development Workflow
-  - Removed sections: None (initial version)
-Templates updated:
-  ✅ .specify/templates/plan-template.md - constitution check references updated
-  ✅ .specify/templates/spec-template.md - aligned with pragmatic approach
-  ✅ .specify/templates/tasks-template.md - aligned with practical testing
-Follow-up TODOs: None
--->
-
-# Kira Prolongation Support Constitution
+# [PROJECT_NAME] Constitution
+<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
 
 ## Core Principles
 
-### I. Keep It Simple
-Start with the simplest solution that works. No abstractions, patterns, or frameworks until you actually need them. Write straightforward code that solves the problem at hand. If you find yourself adding layers or complexity "for the future," stop and reconsider.
+### [PRINCIPLE_1_NAME]
+<!-- Example: I. Library-First -->
+[PRINCIPLE_1_DESCRIPTION]
+<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
 
-### II. Working Code First
-Ship working features before perfecting them. A working MVP beats a perfect plan. Get something running, test it manually, iterate based on real usage. Premature optimization and gold-plating waste time.
+### [PRINCIPLE_2_NAME]
+<!-- Example: II. CLI Interface -->
+[PRINCIPLE_2_DESCRIPTION]
+<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
 
-### III. Practical Testing
-Write tests for things that break or are hard to verify manually. Don't dogmatically test everything. Integration tests that verify real user flows are more valuable than 100% unit test coverage. Tests should give confidence, not ceremony.
+### [PRINCIPLE_3_NAME]
+<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
+[PRINCIPLE_3_DESCRIPTION]
+<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
 
-### IV. Clear Over Clever
-Code should be obvious to read and understand. Avoid clever tricks, complex abstractions, or showing off. If you need to explain how it works, it's probably too clever. Future you (or your collaborators) will thank you for boring, clear code.
+### [PRINCIPLE_4_NAME]
+<!-- Example: IV. Integration Testing -->
+[PRINCIPLE_4_DESCRIPTION]
+<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
 
-### V. Document What Matters
-Document the "why" behind non-obvious decisions. Skip the obvious stuff. A good README and inline comments for tricky parts beat comprehensive API docs that nobody reads. Focus on helping people get started quickly.
+### [PRINCIPLE_5_NAME]
+<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
+[PRINCIPLE_5_DESCRIPTION]
+<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
 
-## Practical Approach
+## [SECTION_2_NAME]
+<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
 
-### What to Avoid
-- Don't create abstractions before you have 3+ use cases
-- Don't add dependencies without checking if you can solve it simply yourself
-- Don't write boilerplate "just in case" (helpers, utils, base classes before needed)
-- Don't split code into multiple files until a single file gets unwieldy
-- Don't implement features you "might need later"
+[SECTION_2_CONTENT]
+<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
 
-### What to Do
-- Solve the immediate problem with the simplest code
-- Add complexity only when the pain of NOT having it is clear
-- Refactor when you see duplication the third time
-- Keep functions and files small enough to understand easily
-- Use standard tools and patterns from the ecosystem
+## [SECTION_3_NAME]
+<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
 
-## Development Workflow
-
-### Getting Started
-1. Write a clear spec of what the feature should do (user perspective)
-2. Sketch out a simple implementation plan
-3. Build it the straightforward way
-4. Test it manually and with a few automated tests for critical paths
-5. Ship it and learn from real usage
-
-### Code Reviews (if collaborating)
-Focus on:
-- Is it clear what this does?
-- Are there obvious bugs?
-- Is it simpler than it needs to be or more complex?
-
-Don't nitpick:
-- Style preferences (use a formatter)
-- Micro-optimizations
-- Theoretical edge cases
-
-### When to Refactor
-- Code is hard to understand or modify
-- You're copying the same logic for the third time
-- A file is too big to scan quickly
-- Tests are brittle and break for unrelated changes
-
-## Technology Choices
-
-Choose boring, proven technologies. Prefer:
-- Languages/frameworks you already know
-- Established tools with good documentation
-- Standard patterns from the community
-- Simple deployment and infrastructure
-
-Avoid:
-- Latest trendy tech "to learn it"
-- Complex architectures (microservices, event sourcing unless actually needed)
-- Custom solutions when good libraries exist
-- Over-engineering for scale you don't have
+[SECTION_3_CONTENT]
+<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
 
 ## Governance
+<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-This constitution exists to keep the project simple and practical. It should evolve based on real pain points, not theoretical concerns.
+[GOVERNANCE_RULES]
+<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
 
-### Amendment Process
-- Propose changes when you repeatedly hit the same problem
-- Discuss with collaborators (if any)
-- Update this document with clear reasoning
-- Bump version appropriately
-
-### Version Control
-- MAJOR: Remove or fundamentally change a principle
-- MINOR: Add new principle or major section
-- PATCH: Clarify wording, fix typos, minor refinements
-
-### Compliance
-This isn't a bureaucratic checklist. Use good judgment. The spirit is:
-**Build useful things simply, don't overcomplicate.**
-
-**Version**: 1.0.0 | **Ratified**: 2025-10-05 | **Last Amended**: 2025-10-05
+**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
+<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
