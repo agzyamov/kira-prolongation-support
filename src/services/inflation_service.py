@@ -246,7 +246,7 @@ class InflationService:
     
     def fetch_tufe_from_tcmb(self, year: int) -> Optional[Decimal]:
         """
-        Fetch TÜFE data from TCMB API.
+        Fetch TÜFE data from TCMB website.
         
         Args:
             year: Year to fetch TÜFE for
@@ -261,11 +261,64 @@ class InflationService:
             return None
         
         try:
-            # For now, return None as this would require TCMB API integration
-            # In a real implementation, this would make an API call to TCMB
-            # to fetch the official TÜFE data for the given year
+            import requests
+            from bs4 import BeautifulSoup
+            import re
+            
+            # TCMB TÜFE data URL
+            url = "https://www.tcmb.gov.tr/wps/wcm/connect/TR/TCMB+TR/Main+Menu/Istatistikler/Enflasyon+Verileri/Tuketici+Fiyatlari"
+            
+            # Fetch the page
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            
+            # Parse HTML
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Look for TÜFE data in tables or specific elements
+            # This is a simplified approach - in practice, you'd need to adapt to TCMB's actual HTML structure
+            tables = soup.find_all('table')
+            
+            for table in tables:
+                rows = table.find_all('tr')
+                for row in rows:
+                    cells = row.find_all(['td', 'th'])
+                    if len(cells) >= 2:
+                        # Look for year in first cell and percentage in second cell
+                        first_cell = cells[0].get_text(strip=True)
+                        second_cell = cells[1].get_text(strip=True)
+                        
+                        # Check if this row contains data for our target year
+                        if str(year) in first_cell:
+                            # Extract percentage value
+                            percentage_match = re.search(r'(\d+[,.]?\d*)', second_cell)
+                            if percentage_match:
+                                percentage_str = percentage_match.group(1).replace(',', '.')
+                                try:
+                                    percentage = float(percentage_str)
+                                    return Decimal(str(percentage))
+                                except ValueError:
+                                    continue
+            
+            # If no data found in tables, try alternative approach
+            # Look for TÜFE data in text content
+            page_text = soup.get_text()
+            year_pattern = rf'{year}.*?(\d+[,.]?\d*)\s*%'
+            match = re.search(year_pattern, page_text, re.IGNORECASE)
+            if match:
+                percentage_str = match.group(1).replace(',', '.')
+                try:
+                    percentage = float(percentage_str)
+                    return Decimal(str(percentage))
+                except ValueError:
+                    pass
+            
             return None
-        except Exception:
-            # If API call fails, return None
+            
+        except requests.RequestException as e:
+            # Network error
+            return None
+        except Exception as e:
+            # Other errors (parsing, etc.)
             return None
 

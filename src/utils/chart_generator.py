@@ -250,17 +250,40 @@ class ChartGenerator:
         
         # Add vertical markers for each agreement
         for agreement in agreements:
-            # Convert start date to string for x-axis
+            # Convert start date to string for x-axis (matching the chart's x-axis format)
             start_date_str = agreement.start_date.strftime("%Y-%m")
             
-            # Add vertical line
-            fig.add_vline(
+            # Add vertical line using add_shape instead of add_vline for better compatibility
+            fig.add_shape(
+                type="line",
+                x0=start_date_str,
+                x1=start_date_str,
+                y0=0,
+                y1=1,
+                yref="paper",
+                line=dict(
+                    color="gray",
+                    width=2,
+                    dash="dash"
+                )
+            )
+            
+            # Add annotation
+            fig.add_annotation(
                 x=start_date_str,
-                line_dash="dash",
-                line_color="gray",
-                opacity=0.7,
-                annotation_text=f"New Agreement ({agreement.start_date.year})",
-                annotation_position="top"
+                y=1,
+                yref="paper",
+                text=f"New Agreement ({agreement.start_date.year})",
+                showarrow=True,
+                arrowhead=2,
+                arrowsize=1,
+                arrowwidth=2,
+                arrowcolor="gray",
+                ax=0,
+                ay=-40,
+                bgcolor="white",
+                bordercolor="gray",
+                borderwidth=1
             )
         
         return fig

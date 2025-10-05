@@ -4,16 +4,32 @@ Tests the new TÜFE methods before implementation.
 """
 
 import pytest
+import tempfile
+import os
 from decimal import Decimal
 from src.services.inflation_service import InflationService
+from src.storage import DataStore
 
 
 class TestInflationServiceExtensions:
     """Contract tests for InflationService extensions."""
 
+    def setup_method(self):
+        """Set up test database for each test."""
+        self.temp_db = tempfile.NamedTemporaryFile(suffix='.db', delete=False)
+        self.db_path = self.temp_db.name
+        self.temp_db.close()
+        self.data_store = DataStore(self.db_path)
+        self.service = InflationService(self.data_store)
+
+    def teardown_method(self):
+        """Clean up test database after each test."""
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+
     def test_get_yearly_tufe_returns_decimal_or_none(self):
         """Test that get_yearly_tufe returns Decimal or None."""
-        service = InflationService()
+        service = self.service
         
         # Test with valid year
         tufe = service.get_yearly_tufe(2024)
@@ -21,7 +37,7 @@ class TestInflationServiceExtensions:
 
     def test_get_yearly_tufe_handles_invalid_years(self):
         """Test that get_yearly_tufe handles invalid years gracefully."""
-        service = InflationService()
+        service = self.service
         
         # Test with future year (should return None)
         tufe = service.get_yearly_tufe(2030)
@@ -33,14 +49,14 @@ class TestInflationServiceExtensions:
 
     def test_is_tufe_available_returns_boolean(self):
         """Test that is_tufe_available returns a boolean."""
-        service = InflationService()
+        service = self.service
         
         available = service.is_tufe_available(2024)
         assert isinstance(available, bool)
 
     def test_is_tufe_available_handles_different_years(self):
         """Test that is_tufe_available handles different years."""
-        service = InflationService()
+        service = self.service
         
         # Test current year
         current_available = service.is_tufe_available(2024)
@@ -56,7 +72,7 @@ class TestInflationServiceExtensions:
 
     def test_fetch_tufe_from_tcmb_returns_decimal_or_none(self):
         """Test that fetch_tufe_from_tcmb returns Decimal or None."""
-        service = InflationService()
+        service = self.service
         
         # Test with valid year
         tufe = service.fetch_tufe_from_tcmb(2024)

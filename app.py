@@ -589,9 +589,26 @@ elif page == "📊 Inflation Data":
         st.write("**TÜFE Data Source**")
         st.info("📊 **Data source**: TCMB (exchange rates), TÜFE (inflation)")
         
-        # Fetch from TCMB button (placeholder)
+        # Fetch from TCMB button
         if st.button("🔄 Fetch from TCMB"):
-            st.info("🔄 TÜFE data fetching from TCMB is not yet implemented. Please enter manually.")
+            with st.spinner("Fetching TÜFE data from TCMB..."):
+                try:
+                    tufe_rate = services['inflation_service'].fetch_tufe_from_tcmb(current_year)
+                    if tufe_rate is not None:
+                        # Save the fetched TÜFE data
+                        services['inflation_service'].save_manual_entry(
+                            month=12,  # Year-end data
+                            year=current_year,
+                            inflation_rate_percent=tufe_rate,
+                            source="TCMB Fetched"
+                        )
+                        st.success(f"✅ TÜFE data fetched from TCMB: {tufe_rate}%")
+                        st.rerun()
+                    else:
+                        st.warning("⚠️ TÜFE data not found on TCMB website. Please enter manually.")
+                except Exception as e:
+                    st.error(f"❌ Error fetching from TCMB: {e}")
+                    st.info("Please enter TÜFE data manually.")
     
     # Display inflation data
     st.markdown("---")

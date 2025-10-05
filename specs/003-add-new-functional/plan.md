@@ -1,8 +1,8 @@
 
-# Implementation Plan: Add New Functional Requirements
+# Implementation Plan: [FEATURE]
 
-**Branch**: `003-add-new-functional` | **Date**: 2025-10-05 | **Spec**: `/specs/003-add-new-functional/spec.md`
-**Input**: Feature specification from `/specs/003-add-new-functional/spec.md`
+**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
+**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
 ## Execution Flow (/plan command scope)
 ```
@@ -31,42 +31,42 @@
 - Phase 3-4: Implementation execution (manual or via tools)
 
 ## Summary
-Add new functional requirements for the Rental Fee Negotiation Support Tool including legal CPI/cap context, neutral negotiation phrasing, negotiation mode settings, agreement period annotations, and data source disclosure. The implementation will extend the existing Streamlit application with new UI components, calculation logic, and export functionality.
+[Extract from feature spec: primary requirement + technical approach from research]
 
 ## Technical Context
-**Language/Version**: Python 3.13  
-**Primary Dependencies**: Streamlit 1.50.0, Plotly 6.3.1, Pandas 2.3.0, Requests 2.32.3  
-**Storage**: SQLite database (existing rental_negotiation.db)  
-**Testing**: pytest 8.3.0  
-**Target Platform**: Web application (Streamlit)  
-**Project Type**: Single project (existing structure)  
-**Performance Goals**: Real-time UI updates, <2s page load times  
-**Constraints**: Must integrate with existing codebase, maintain backward compatibility  
-**Scale/Scope**: Single user application, ~50 new lines of code per feature
+**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
+**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
+**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
+**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
+**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Project Type**: [single/web/mobile - determines source structure]  
+**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
+**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
+**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
 ### Simple and Direct Check
-- [x] Solution is straightforward and easy to understand
-- [x] No unnecessary abstractions or patterns added
-- [x] Code structure is as simple as possible for the requirements
+- [ ] Solution is straightforward and easy to understand
+- [ ] No unnecessary abstractions or patterns added
+- [ ] Code structure is as simple as possible for the requirements
 
 ### Test What Matters Check
-- [x] Test strategy focuses on critical paths and hard-to-verify behavior
-- [x] Not over-testing simple or obvious functionality
-- [x] Tests provide real confidence, not just coverage
+- [ ] Test strategy focuses on critical paths and hard-to-verify behavior
+- [ ] Not over-testing simple or obvious functionality
+- [ ] Tests provide real confidence, not just coverage
 
 ### Done Over Perfect Check
-- [x] Feature scope is focused on working functionality
-- [x] Not gold-plating or over-engineering
-- [x] Plan enables shipping something useful quickly
+- [ ] Feature scope is focused on working functionality
+- [ ] Not gold-plating or over-engineering
+- [ ] Plan enables shipping something useful quickly
 
 ## Project Structure
 
 ### Documentation (this feature)
 ```
-specs/003-add-new-functional/
+specs/[###-feature]/
 ├── plan.md              # This file (/plan command output)
 ├── research.md          # Phase 0 output (/plan command)
 ├── data-model.md        # Phase 1 output (/plan command)
@@ -76,34 +76,50 @@ specs/003-add-new-functional/
 ```
 
 ### Source Code (repository root)
+<!--
+  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
+  for this feature. Delete unused options and expand the chosen structure with
+  real paths (e.g., apps/admin, packages/something). The delivered plan must
+  not include Option labels.
+-->
 ```
+# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
 src/
 ├── models/
-│   ├── rental_agreement.py
-│   ├── exchange_rate.py
-│   ├── payment_record.py
-│   └── inflation_data.py
 ├── services/
-│   ├── calculation_service.py
-│   ├── exchange_rate_service.py
-│   ├── inflation_service.py
-│   └── export_service.py
-├── utils/
-│   ├── chart_generator.py
-│   └── validators.py
-└── storage/
-    └── data_store.py
+├── cli/
+└── lib/
 
 tests/
 ├── contract/
 ├── integration/
 └── unit/
 
-app.py                   # Main Streamlit application
-requirements.txt         # Python dependencies
+# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
+backend/
+├── src/
+│   ├── models/
+│   ├── services/
+│   └── api/
+└── tests/
+
+frontend/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   └── services/
+└── tests/
+
+# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
+api/
+└── [same as backend above]
+
+ios/ or android/
+└── [platform-specific structure: feature modules, UI flows, platform tests]
 ```
 
-**Structure Decision**: Single project structure with existing Streamlit application. New features will extend existing models, services, and UI components without requiring architectural changes.
+**Structure Decision**: [Document the selected structure and reference the real
+directories captured above]
 
 ## Phase 0: Outline & Research
 1. **Extract unknowns from Technical Context** above:
@@ -165,26 +181,17 @@ requirements.txt         # Python dependencies
 **Task Generation Strategy**:
 - Load `.specify/templates/tasks-template.md` as base
 - Generate tasks from Phase 1 design docs (contracts, data model, quickstart)
-- Each new entity → model creation task [P]
-- Each service extension → implementation task [P]
-- Each UI component → integration test task
-- Each quickstart scenario → validation task
+- Each contract → contract test task [P]
+- Each entity → model creation task [P] 
+- Each user story → integration test task
+- Implementation tasks to make tests pass
 
 **Ordering Strategy**:
 - TDD order: Tests before implementation 
 - Dependency order: Models before services before UI
 - Mark [P] for parallel execution (independent files)
-- Group by feature: Legal rules → Negotiation mode → Annotations → Disclosure
 
-**Estimated Output**: 20-25 numbered, ordered tasks in tasks.md
-
-**Task Categories**:
-1. **Setup Phase**: Database migrations, new dependencies
-2. **Tests First Phase**: Contract tests, unit tests, integration tests
-3. **Core Implementation Phase**: Models, services, UI components
-4. **Integration Phase**: Chart updates, export updates, API integration
-5. **Testing & Validation Phase**: Quickstart scenarios, regression tests
-6. **Documentation & Cleanup Phase**: Code cleanup, documentation updates
+**Estimated Output**: 25-30 numbered, ordered tasks in tasks.md
 
 **IMPORTANT**: This phase is executed by the /tasks command, NOT by /plan
 
@@ -208,18 +215,18 @@ requirements.txt         # Python dependencies
 *This checklist is updated during execution flow*
 
 **Phase Status**:
-- [x] Phase 0: Research complete (/plan command)
-- [x] Phase 1: Design complete (/plan command)
-- [x] Phase 2: Task planning complete (/plan command - describe approach only)
+- [ ] Phase 0: Research complete (/plan command)
+- [ ] Phase 1: Design complete (/plan command)
+- [ ] Phase 2: Task planning complete (/plan command - describe approach only)
 - [ ] Phase 3: Tasks generated (/tasks command)
 - [ ] Phase 4: Implementation complete
 - [ ] Phase 5: Validation passed
 
 **Gate Status**:
-- [x] Initial Constitution Check: PASS
-- [x] Post-Design Constitution Check: PASS
-- [x] All NEEDS CLARIFICATION resolved
-- [x] Complexity deviations documented
+- [ ] Initial Constitution Check: PASS
+- [ ] Post-Design Constitution Check: PASS
+- [ ] All NEEDS CLARIFICATION resolved
+- [ ] Complexity deviations documented
 
 ---
 *Based on Constitution v1.0.0 - See `.specify/memory/constitution.md`*
