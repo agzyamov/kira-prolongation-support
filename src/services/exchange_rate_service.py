@@ -69,8 +69,8 @@ class ExchangeRateService:
         """
         Fetch exchange rate from TCMB (Central Bank of Turkey).
         
-        TCMB provides daily rates. We'll fetch mid-month rate as approximation
-        of monthly average.
+        TCMB provides daily rates. We'll try multiple days in the month to find
+        available data, as TCMB doesn't have data for weekends/holidays.
         
         Args:
             month: Month (1-12)
@@ -80,38 +80,56 @@ class ExchangeRateService:
             ExchangeRate object
             
         Raises:
-            Exception: If TCMB API fails
+            Exception: If TCMB API fails for all attempted days
         """
-        # Use mid-month (15th) as representative day
-        day = 15
+        # Try multiple days in the month to find available data
+        # Start with mid-month, then try other days
+        days_to_try = [15, 14, 16, 13, 17, 12, 18, 11, 19, 10, 20, 9, 21, 8, 22, 7, 23, 6, 24, 5, 25, 4, 26, 3, 27, 2, 28, 1, 29, 30, 31]
         
-        url = self.TCMB_API_URL.format(year=year, month=month, day=day)
+        last_error = None
         
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
+        for day in days_to_try:
+            try:
+                # Skip invalid days for the month
+                if month in [4, 6, 9, 11] and day > 30:  # 30-day months
+                    continue
+                elif month == 2 and day > 28:  # February (ignoring leap years for simplicity)
+                    continue
+                
+                url = self.TCMB_API_URL.format(year=year, month=month, day=day)
+                
+                response = requests.get(url, timeout=10)
+                response.raise_for_status()
+                
+                # Parse XML response
+                root = ET.fromstring(response.content)
+                
+                # Find USD currency
+                usd_element = root.find(".//Currency[@CurrencyCode='USD']")
+                if usd_element is None:
+                    continue  # Try next day
+                
+                # Get ForexBuying rate (TL per 1 USD)
+                forex_buying = usd_element.find("ForexBuying")
+                if forex_buying is None or not forex_buying.text:
+                    continue  # Try next day
+                
+                rate_value = Decimal(forex_buying.text.replace(',', '.'))
+                
+                return ExchangeRate(
+                    month=month,
+                    year=year,
+                    rate_tl_per_usd=rate_value,
+                    source="TCMB",
+                    notes=f"Fetched from TCMB on {year}-{month:02d}-{day:02d}"
+                )
+                
+            except Exception as e:
+                last_error = e
+                continue  # Try next day
         
-        # Parse XML response
-        root = ET.fromstring(response.content)
-        
-        # Find USD currency
-        usd_element = root.find(".//Currency[@CurrencyCode='USD']")
-        if usd_element is None:
-            raise Exception("USD not found in TCMB response")
-        
-        # Get ForexBuying rate (TL per 1 USD)
-        forex_buying = usd_element.find("ForexBuying")
-        if forex_buying is None or not forex_buying.text:
-            raise Exception("ForexBuying rate not found")
-        
-        rate_value = Decimal(forex_buying.text.replace(',', '.'))
-        
-        return ExchangeRate(
-            month=month,
-            year=year,
-            rate_tl_per_usd=rate_value,
-            source="TCMB",
-            notes=f"Fetched from TCMB on {datetime.now().date()}"
-        )
+        # If we get here, all days failed
+        raise Exception(f"TCMB API failed for all days in {year}-{month:02d}. Last error: {last_error}")
     
     def get_cached_rate(self, month: int, year: int) -> Optional[ExchangeRate]:
         """
