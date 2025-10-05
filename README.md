@@ -21,7 +21,7 @@ A data-driven application that:
 - **Language**: Python 3.11+
 - **UI**: Streamlit (web app)
 - **Charts**: Plotly + Kaleido
-- **OCR**: Pytesseract
+- **OCR**: EasyOCR (deep learning-based, better for stylized text)
 - **Storage**: SQLite
 - **Testing**: pytest
 - **Deployment**: Streamlit Cloud (free)
@@ -41,17 +41,8 @@ source .venv/bin/activate  # On macOS/Linux
 # OR on Windows: .venv\Scripts\activate
 
 # Install dependencies
+# Note: EasyOCR will download Turkish language models automatically on first run (~75MB)
 pip install -r requirements.txt
-
-# Install Tesseract OCR (for screenshot parsing)
-# macOS:
-brew install tesseract tesseract-lang
-
-# Ubuntu/Debian:
-sudo apt-get install tesseract-ocr tesseract-ocr-tur
-
-# Windows:
-# Download installer from: https://github.com/UB-Mannheim/tesseract/wiki
 ```
 
 ### 2. Run the Application
