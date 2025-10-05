@@ -1,274 +1,239 @@
+
 # Implementation Plan: Rental Fee Negotiation Support Tool
 
-**Branch**: `001-problem-statement-i` | **Date**: 2025-10-05 | **Spec**: [spec.md](./spec.md)
+**Branch**: `001-problem-statement-i` | **Date**: 2025-10-05 | **Spec**: [link]
 **Input**: Feature specification from `/specs/001-problem-statement-i/spec.md`
 
 ## Execution Flow (/plan command scope)
 ```
-1. Load feature spec from Input path ✓
-2. Fill Technical Context ✓
-3. Fill the Constitution Check section ✓
-4. Evaluate Constitution Check section ✓
-5. Execute Phase 0 → research.md (IN PROGRESS)
-6. Execute Phase 1 → contracts, data-model.md, quickstart.md
+1. Load feature spec from Input path
+   → If not found: ERROR "No feature spec at {path}"
+2. Fill Technical Context (scan for NEEDS CLARIFICATION)
+   → Detect Project Type from file system structure or context (web=frontend+backend, mobile=app+api)
+   → Set Structure Decision based on project type
+3. Fill the Constitution Check section based on the content of the constitution document.
+4. Evaluate Constitution Check section below
+   → If violations exist: Document in Complexity Tracking
+   → If no justification possible: ERROR "Simplify approach first"
+   → Update Progress Tracking: Initial Constitution Check
+5. Execute Phase 0 → research.md
+   → If NEEDS CLARIFICATION remain: ERROR "Resolve unknowns"
+6. Execute Phase 1 → contracts, data-model.md, quickstart.md, agent-specific template file (e.g., `CLAUDE.md` for Claude Code, `.github/copilot-instructions.md` for GitHub Copilot, `GEMINI.md` for Gemini CLI, `QWEN.md` for Qwen Code, or `AGENTS.md` for all other agents).
 7. Re-evaluate Constitution Check section
-8. Plan Phase 2 → Describe task generation approach
+   → If new violations: Refactor design, return to Phase 1
+   → Update Progress Tracking: Post-Design Constitution Check
+8. Plan Phase 2 → Describe task generation approach (DO NOT create tasks.md)
 9. STOP - Ready for /tasks command
 ```
 
+**IMPORTANT**: The /plan command STOPS at step 7. Phases 2-4 are executed by other commands:
+- Phase 2: /tasks command creates tasks.md
+- Phase 3-4: Implementation execution (manual or via tools)
+
 ## Summary
-
-Build a web application to help tenants in Turkey negotiate rental agreements by:
-- Visualizing historical rent payments in both TL and USD equivalents
-- Comparing current rent with market rates from sahibinden.com screenshots
-- Showing legal maximum increases based on Turkish inflation data
-- Exporting WhatsApp-friendly summaries for negotiations
-
-**Key Constraints**:
-- Zero paid infrastructure (free hosting required)
-- Usable by non-developers
-- Evergreen solution (works for any future period)
-- Simple and direct implementation (per constitution)
+A web application for Turkish tenants to visualize historical rental payments in TL and USD equivalents, compare with market rates, and generate negotiation materials. The system fetches exchange rates from TCMB, parses market data from screenshots, and provides legal context for rent increases with user-selectable presentation modes.
 
 ## Technical Context
-
-**Language/Version**: Python 3.11+  
-**Primary Dependencies**: Streamlit, Plotly, Pytesseract, requests, pandas, SQLite  
-**Storage**: SQLite (simple, no infrastructure, portable)  
-**Testing**: pytest for calculations/logic, manual testing for UI  
-**Target Platform**: Web browser (Chrome, Safari, Firefox) + Streamlit Cloud (free hosting)  
-**Project Type**: Web application (Streamlit single-page app)  
-**Performance Goals**: <3s page load, <5s screenshot parsing, responsive charts  
-**Constraints**: Zero infrastructure costs, <100MB storage, works offline after initial data fetch  
-**Scale/Scope**: Single user + ~10 colleagues, ~10 rental agreements, ~100 screenshots
+**Language/Version**: Python 3.13  
+**Primary Dependencies**: Streamlit 1.50.0, Plotly 6.3.1, EasyOCR 1.7.2, Pandas 2.3.0, Requests 2.32.3  
+**Storage**: SQLite (local database for persistence)  
+**Testing**: pytest 8.3.0  
+**Target Platform**: Web application (Streamlit Cloud or similar free hosting)  
+**Project Type**: single (web application)  
+**Performance Goals**: <2s page load, <5s screenshot processing, <1s chart rendering  
+**Constraints**: Free hosting, no paid infrastructure, usable by non-developers  
+**Scale/Scope**: Personal use, 3-4 rental agreements, shareable with colleagues
 
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-### I. Simple and Direct Check
-- [x] Solution is straightforward (single Python web app, minimal dependencies)
-- [x] No unnecessary abstractions (direct data flow: input → calculate → visualize → export)
-- [x] Code structure as simple as possible (monolithic Streamlit app, no microservices)
+### Simple and Direct Check
+- [x] Solution is straightforward and easy to understand
+- [x] No unnecessary abstractions or patterns added
+- [x] Code structure is as simple as possible for the requirements
 
-### II. Test What Matters Check
-- [x] Test strategy focuses on critical paths (exchange rate calculations, USD conversions, conditional agreements)
-- [x] Not over-testing simple functionality (manual UI testing, no unit tests for trivial getters)
-- [x] Tests provide real confidence (test edge cases: missing data, invalid screenshots, API failures)
+### Test What Matters Check
+- [x] Test strategy focuses on critical paths and hard-to-verify behavior
+- [x] Not over-testing simple or obvious functionality
 
-### III. Done Over Perfect Check
-- [x] Feature scope focused on working functionality (core features only, no extras)
-- [x] Not gold-plating (simple libraries, no premature optimization)
-- [x] Plan enables quick shipping (MVP deployable in single iteration)
+### Latest Stable Dependencies Check
+- [x] All dependencies pinned to specific versions (no ranges)
+- [x] Using latest stable releases as of September 2025
+- [x] Streamlit 1.50.0 specified for web framework
+- [x] Dependencies updated for security patches and bug fixes
 
-### IV. Use Context7 for Library Research Check
-- [x] Will use Context7 MCP to research Streamlit best practices and current APIs
-- [x] Will use Context7 for Plotly documentation (chart types, export options)
-- [x] Will use Context7 for Pytesseract/OCR library current patterns
-
-**Constitution Check Result**: ✅ PASS - All principles satisfied
+### Done Over Perfect Check
+- [x] Feature scope is focused on working functionality
+- [x] Not gold-plating or over-engineering
+- [x] Plan enables shipping something useful quickly
 
 ## Project Structure
 
 ### Documentation (this feature)
 ```
-specs/001-problem-statement-i/
-├── spec.md              # Feature specification
-├── plan.md              # This file
-├── research.md          # Phase 0 output (next)
-├── data-model.md        # Phase 1 output
-├── quickstart.md        # Phase 1 output
-├── contracts/           # Phase 1 output
-└── tasks.md             # Phase 2 output (/tasks command)
+specs/[###-feature]/
+├── plan.md              # This file (/plan command output)
+├── research.md          # Phase 0 output (/plan command)
+├── data-model.md        # Phase 1 output (/plan command)
+├── quickstart.md        # Phase 1 output (/plan command)
+├── contracts/           # Phase 1 output (/plan command)
+└── tasks.md             # Phase 2 output (/tasks command - NOT created by /plan)
 ```
 
 ### Source Code (repository root)
 ```
-kira-prolongation-support/
-├── app.py                       # Main Streamlit app entry point
-├── src/
+src/
+├── models/
 │   ├── __init__.py
-│   ├── models/
-│   │   ├── __init__.py
-│   │   ├── rental_agreement.py    # RentalAgreement entity
-│   │   ├── exchange_rate.py       # ExchangeRate entity  
-│   │   ├── payment_record.py      # PaymentRecord entity
-│   │   ├── market_rate.py         # MarketRate entity
-│   │   └── inflation_data.py      # InflationData entity
-│   ├── services/
-│   │   ├── __init__.py
-│   │   ├── exchange_rate_service.py   # Fetch USD/TL rates from TCMB/backup API
-│   │   ├── inflation_service.py       # Fetch/store Turkish inflation data
-│   │   ├── screenshot_parser.py       # Parse sahibinden screenshots with OCR
-│   │   ├── calculation_service.py     # USD conversions, percentage changes
-│   │   └── export_service.py          # PDF/image export for WhatsApp
-│   ├── storage/
-│   │   ├── __init__.py
-│   │   └── data_store.py              # SQLite persistence layer
-│   └── utils/
-│       ├── __init__.py
-│       ├── chart_generator.py         # Plotly chart creation
-│       └── validators.py              # Input validation helpers
-├── tests/
+│   ├── rental_agreement.py
+│   ├── exchange_rate.py
+│   ├── payment_record.py
+│   ├── market_rate.py
+│   └── inflation_data.py
+├── services/
 │   ├── __init__.py
-│   ├── test_calculations.py           # Test USD conversions, percentages, conditional logic
-│   ├── test_exchange_rates.py         # Test rate fetching and caching
-│   ├── test_conditional_agreements.py # Test conditional pricing logic
-│   └── test_screenshot_parser.py      # Test OCR parsing (mock images)
-├── data/                               # Local data storage (gitignored)
-│   ├── .gitkeep
-│   └── user_data.db                    # SQLite database (created at runtime)
-├── .streamlit/
-│   └── config.toml                     # Streamlit configuration
-├── .gitignore
-├── requirements.txt                    # Python dependencies
-├── README.md                           # Setup and usage instructions
-└── .python-version                     # Python version (3.11)
+│   ├── exchange_rate_service.py
+│   ├── calculation_service.py
+│   ├── screenshot_parser.py
+│   ├── inflation_service.py
+│   └── export_service.py
+├── storage/
+│   ├── __init__.py
+│   └── data_store.py
+└── utils/
+    ├── __init__.py
+    ├── chart_generator.py
+    └── validators.py
+
+tests/
+├── test_models.py
+├── test_services.py
+├── test_storage.py
+└── test_utils.py
+
+app.py
+requirements.txt
 ```
 
-**Structure Decision**: Single Streamlit web application - simplest architecture that meets all requirements. Streamlit handles both frontend and backend, eliminating need for separate API layer. Clear separation of concerns: models (data structures), services (business logic), storage (persistence), utils (helpers).
+**Structure Decision**: Single project structure with clear separation of models, services, storage, and utilities. Streamlit app.py serves as the main entry point.
 
 ## Phase 0: Outline & Research
+1. **Extract unknowns from Technical Context** above:
+   - For each NEEDS CLARIFICATION → research task
+   - For each dependency → best practices task
+   - For each integration → patterns task
 
-**Status**: Starting - will use Context7 MCP for library documentation
+2. **Generate and dispatch research agents**:
+   ```
+   For each unknown in Technical Context:
+     Task: "Research {unknown} for {feature context}"
+   For each technology choice:
+     Task: "Find best practices for {tech} in {domain}"
+   ```
 
-### Research Areas
-1. **Streamlit**: Current best practices, deployment to Streamlit Cloud, file upload handling
-2. **Plotly**: Chart types for comparison visualizations, static image export, WhatsApp optimization
-3. **OCR Libraries**: Pytesseract vs alternatives, accuracy for Turkish text, image preprocessing
-4. **Exchange Rate APIs**: TCMB API format, free alternatives, rate limiting strategies
-5. **Turkish Inflation Data**: TUIK data sources, scraping strategies vs manual entry
+3. **Consolidate findings** in `research.md` using format:
+   - Decision: [what was chosen]
+   - Rationale: [why chosen]
+   - Alternatives considered: [what else evaluated]
 
-### Output
-- `research.md` with technology decisions, alternatives considered, and rationale
-- Resolved any remaining technical uncertainties
-- Library version recommendations with Context7-validated current APIs
+**Output**: research.md with all NEEDS CLARIFICATION resolved
 
 ## Phase 1: Design & Contracts
+*Prerequisites: research.md complete*
 
-**Prerequisites**: research.md complete
+1. **Extract entities from feature spec** → `data-model.md`:
+   - Entity name, fields, relationships
+   - Validation rules from requirements
+   - State transitions if applicable
 
-### Outputs Required
-1. **data-model.md**: Entity definitions based on spec (RentalAgreement, ExchangeRate, PaymentRecord, MarketRate, InflationData)
-2. **contracts/**: Service interfaces (no REST API needed for Streamlit, but define service contracts)
-3. **quickstart.md**: Manual testing guide for core user flows
-4. **Agent context file**: Updated `.cursor/` file with tech stack and recent changes
+2. **Generate API contracts** from functional requirements:
+   - For each user action → endpoint
+   - Use standard REST/GraphQL patterns
+   - Output OpenAPI/GraphQL schema to `/contracts/`
 
-### Data Model Entities (from spec)
-- Rental Agreement (dates, amount, conditional rules)
-- Exchange Rate Data (month/year, rate, source)
-- Payment Record (calculated from agreements + exchange rates)
-- Market Rate Data (from screenshot parsing)
-- Inflation Data (period, rate, legal maximum)
+3. **Generate contract tests** from contracts:
+   - One test file per endpoint
+   - Assert request/response schemas
+   - Tests must fail (no implementation yet)
 
-### Service Contracts
-- ExchangeRateService: fetch_rates(start_date, end_date) → List[ExchangeRate]
-- InflationService: fetch_inflation(start_date, end_date) → List[InflationData]
-- ScreenshotParser: parse_screenshot(image) → List[MarketRate]
-- CalculationService: calculate_usd_equivalent(agreements, exchange_rates) → List[PaymentRecord]
-- ExportService: export_summary(data) → bytes (PNG/PDF)
+4. **Extract test scenarios** from user stories:
+   - Each story → integration test scenario
+   - Quickstart test = story validation steps
+
+5. **Update agent file incrementally** (O(1) operation):
+   - Run `.specify/scripts/bash/update-agent-context.sh cursor`
+     **IMPORTANT**: Execute it exactly as specified above. Do not add or remove any arguments.
+   - If exists: Add only NEW tech from current plan
+   - Preserve manual additions between markers
+   - Update recent changes (keep last 3)
+   - Keep under 150 lines for token efficiency
+   - Output to repository root
+
+**Output**: data-model.md, /contracts/*, failing tests, quickstart.md, agent-specific file
 
 ## Phase 2: Task Planning Approach
+*This section describes what the /tasks command will do - DO NOT execute during /plan*
 
-**This section describes what the /tasks command will do - DO NOT execute during /plan**
+**Task Generation Strategy**:
+- Load `.specify/templates/tasks-template.md` as base
+- Generate tasks from Phase 1 design docs (contracts, data model, quickstart)
+- Each contract → contract test task [P]
+- Each entity → model creation task [P] 
+- Each user story → integration test task
+- Implementation tasks to make tests pass
 
-### Task Generation Strategy
-- Setup tasks: Python environment, Streamlit config, directory structure
-- Model tasks: Create entity classes (parallel - different files)
-- Storage tasks: SQLite schema, data_store implementation
-- Service tasks: Implement each service (some parallel, some sequential)
-- UI tasks: Streamlit pages/components for each feature
-- Integration tasks: Wire services together, add error handling
-- Testing tasks: Write tests for calculations, conditional logic, edge cases
-- Deployment tasks: requirements.txt, README, Streamlit Cloud setup
+**Specific Task Categories**:
+1. **Setup Tasks**: Project structure, dependencies, configuration
+2. **Model Tasks**: RentalAgreement, ExchangeRate, PaymentRecord, MarketRate, InflationData, LegalRule, AgreementPeriod, NegotiationMode
+3. **Service Tasks**: ExchangeRateService, CalculationService, ScreenshotParserService, InflationService, ExportService, DataStore, ChartGenerator
+4. **Contract Tests**: Service interface tests, API integration tests
+5. **Integration Tests**: End-to-end user workflows, screenshot parsing, chart generation
+6. **UI Tasks**: Streamlit interface, form handling, file uploads, chart display
+7. **Export Tasks**: PNG/PDF generation, negotiation summary formatting
+8. **Polish Tasks**: Error handling, validation, documentation
 
-### Ordering Strategy
-- TDD where it matters: Test calculation logic before implementing
-- Bottom-up for architecture: Models → Storage → Services → UI
-- Mark [P] for truly independent files (models, pure functions)
-- Sequential for integrated components (services that depend on storage)
+**Ordering Strategy**:
+- TDD order: Tests before implementation 
+- Dependency order: Models before services before UI
+- Mark [P] for parallel execution (independent files)
+- Critical path: Models → Services → UI → Export
 
-### Estimated Output
-~20-25 tasks total, organized in phases:
-- Phase 3.1: Setup (3-4 tasks)
-- Phase 3.2: Core Models & Storage (4-5 tasks, mostly [P])
-- Phase 3.3: Services (6-7 tasks, mixed [P] and sequential)
-- Phase 3.4: UI Components (5-6 tasks)
-- Phase 3.5: Testing & Deployment (3-4 tasks)
+**Estimated Output**: 30-35 numbered, ordered tasks in tasks.md
+
+**IMPORTANT**: This phase is executed by the /tasks command, NOT by /plan
 
 ## Phase 3+: Future Implementation
+*These phases are beyond the scope of the /plan command*
 
 **Phase 3**: Task execution (/tasks command creates tasks.md)  
-**Phase 4**: Implementation (execute tasks following constitutional principles)  
-**Phase 5**: Validation (run tests, manual testing via quickstart.md, deploy to Streamlit Cloud)
-
-## Post-Design Constitution Check ✅
-
-**Re-evaluation after Phase 1 design completion**:
-
-### I. Simple and Direct Check
-- [x] **Data Model**: 5 simple entities, no complex relationships ✓
-- [x] **Services**: 6 focused services, each with clear purpose ✓
-- [x] **Storage**: Single SQLite file, no distributed systems ✓
-- [x] **Architecture**: Monolithic Streamlit app, simplest possible ✓
-- **Result**: PASS - Design remains simple and direct
-
-### II. Test What Matters Check
-- [x] **Testing Focus**: Calculations, OCR, conditional logic identified ✓
-- [x] **No Over-Testing**: UI testing manual, as appropriate ✓
-- [x] **Quickstart Created**: 10 focused test scenarios ✓
-- **Result**: PASS - Testing approach is pragmatic
-
-### III. Done Over Perfect Check
-- [x] **MVP Scope**: Core features only, no extras ✓
-- [x] **Deliverable**: Can ship with basic features ✓
-- [x] **No Gold-Plating**: Optional features marked clearly (TUIK scraping) ✓
-- **Result**: PASS - Design enables quick delivery
-
-### IV. Use Context7 Check
-- [x] **Research Completed**: All libraries researched via Context7 ✓
-- [x] **Current APIs**: Streamlit, Plotly, Pytesseract docs retrieved ✓
-- [x] **Trust Scores**: All selected libraries 8.0+ ✓
-- [x] **Code Examples**: 2000+ examples available for implementation ✓
-- **Result**: PASS - Context7 used throughout planning
-
-**Overall Post-Design Check**: ✅ **PASS** - All constitutional principles maintained
+**Phase 4**: Implementation (execute tasks.md following constitutional principles)  
+**Phase 5**: Validation (run tests, execute quickstart.md, performance validation)
 
 ## Complexity Tracking
+*Fill ONLY if Constitution Check has violations that must be justified*
 
-*No constitutional violations - all checks passed. Simple, direct solution.*
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|-------------------------------------|
+| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
 
-| Check | Status | Notes |
-|-------|--------|-------|
-| Simple architecture | ✓ | Single Streamlit app, 5 entities, 6 services |
-| Minimal abstractions | ✓ | Direct service calls, no complex patterns |
-| Test what matters | ✓ | Focus on calculations, conditional logic, OCR |
-| Ship quickly | ✓ | MVP ready with ~25 tasks (Phase 2) |
-| Use Context7 | ✓ | All libraries researched, current APIs validated |
 
 ## Progress Tracking
+*This checklist is updated during execution flow*
 
 **Phase Status**:
-- [x] Phase 0: Research complete (Context7 used for all libraries)
+- [x] Phase 0: Research complete (/plan command)
 - [x] Phase 1: Design complete (/plan command)
-- [x] Phase 2: Task planning approach described (/plan command)
-- [x] Phase 3: Tasks generated (/tasks command) - 30 specific tasks created
-- [ ] Phase 4: Implementation (ready for /implement command)
+- [ ] Phase 2: Task planning complete (/plan command - describe approach only)
+- [ ] Phase 3: Tasks generated (/tasks command)
+- [ ] Phase 4: Implementation complete
 - [ ] Phase 5: Validation passed
 
 **Gate Status**:
 - [x] Initial Constitution Check: PASS
-- [x] Post-Design Constitution Check: PASS (re-evaluated below)
-- [x] All technical decisions made: research.md complete
-- [x] Complexity deviations documented: None (no violations)
-
-**Artifacts Generated**:
-- [x] plan.md (this file)
-- [x] research.md (Context7-validated library research)
-- [x] data-model.md (5 entities, SQLite schema)
-- [x] contracts/service-interfaces.md (6 service contracts)
-- [x] quickstart.md (10 test scenarios)
-- [x] tasks.md (30 implementation tasks, dependency-ordered)
-- [x] .cursor/rules/specify-rules.mdc (agent context updated)
+- [x] Post-Design Constitution Check: PASS
+- [x] All NEEDS CLARIFICATION resolved
+- [x] Complexity deviations documented
 
 ---
-*Based on Constitution v1.1.0 - See `.specify/memory/constitution.md`*
+*Based on Constitution v1.5.0 - See `.specify/memory/constitution.md`*

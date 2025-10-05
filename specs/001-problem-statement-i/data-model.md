@@ -1,439 +1,309 @@
 # Data Model: Rental Fee Negotiation Support Tool
 
-**Date**: 2025-10-05  
-**Purpose**: Define data entities and their relationships  
-**Source**: Derived from spec.md requirements
+## Core Entities
 
-## Entity Overview
-
-This application manages five core entities:
-
-1. **RentalAgreement**: Time-bound rental contracts with pricing
-2. **ExchangeRate**: Historical USD/TL exchange rate data
-3. **PaymentRecord**: Calculated monthly payments in TL and USD
-4. **MarketRate**: Comparable apartment rents from screenshots
-5. **InflationData**: Turkish official inflation rates
-
-## Entity Definitions
-
-### 1. RentalAgreement
-
-Represents a rental agreement period with associated pricing rules.
-
+### RentalAgreement
+**Purpose**: Represents a rental contract period with associated terms
 **Attributes**:
-```python
-id: int  # Primary key
-start_date: date  # Agreement start (month/year precision)
-end_date: date  # Agreement end (month/year precision)
-base_amount_tl: decimal  # Base monthly rent in Turkish Lira
-conditional_rules: Optional[JSON]  # Conditional pricing (see below)
-notes: Optional[str]  # User notes about this agreement
-created_at: datetime
-updated_at: datetime
-```
+- `id`: Integer (Primary Key, Auto-increment)
+- `start_date`: Date (Required)
+- `end_date`: Date (Optional, null for ongoing agreements)
+- `base_amount_tl`: Decimal (Required, precision 2)
+- `conditional_rules`: JSON (Optional, stores conditional pricing logic)
+- `notes`: Text (Optional, user notes)
+- `created_at`: DateTime (Auto-generated)
+- `updated_at`: DateTime (Auto-updated)
 
-**Conditional Rules Structure** (JSON):
-```json
-{
-  "condition_type": "exchange_rate",
-  "rules": [
-    {
-      "condition": "usd_tl_rate < 40",
-      "amount_tl": 35000
-    },
-    {
-      "condition": "usd_tl_rate >= 40",
-      "amount_tl": 40000
-    }
-  ],
-  "applies_from": "2024-12-01"
-}
-```
+**Validation Rules**:
+- start_date must be before end_date (if provided)
+- base_amount_tl must be positive
+- conditional_rules must be valid JSON if provided
+- No overlapping agreements allowed (enforced at application level)
 
-**Business Rules**:
-- start_date must be before end_date
-- base_amount_tl must be > 0
-- Agreements should not overlap (warning, not hard constraint)
-- Conditional rules are optional
-- Dates stored as YYYY-MM (month precision sufficient)
+**Relationships**:
+- One-to-many with PaymentRecord
+- One-to-many with AgreementPeriod
 
-**Example**:
-```python
-RentalAgreement(
-    id=1,
-    start_date=date(2022, 11, 1),
-    end_date=date(2023, 10, 31),
-    base_amount_tl=15000,
-    conditional_rules=None,
-    notes="Initial agreement"
-)
-
-RentalAgreement(
-    id=4,
-    start_date=date(2024, 12, 1),
-    end_date=None,  # Current/ongoing
-    base_amount_tl=31000,
-    conditional_rules={...},  # As shown above
-    notes="Agreement with USD rate conditions"
-)
-```
-
-### 2. ExchangeRate
-
-Historical USD/TL exchange rates (monthly averages for payment calculations).
-
+### ExchangeRate
+**Purpose**: Historical USD/TL exchange rates from TCMB
 **Attributes**:
-```python
-id: int  # Primary key
-month: int  # 1-12
-year: int  # e.g., 2024
-rate_tl_per_usd: decimal  # How many TL for 1 USD (e.g., 32.50)
-source: str  # "TCMB" or "exchangerate-api.io"
-fetched_at: datetime  # When data was retrieved
-```
+- `id`: Integer (Primary Key, Auto-increment)
+- `date`: Date (Required, unique)
+- `rate`: Decimal (Required, precision 4)
+- `source`: String (Required, default: "TCMB")
+- `created_at`: DateTime (Auto-generated)
 
-**Business Rules**:
-- Unique constraint on (month, year)
-- rate_tl_per_usd must be > 0
-- Rates are cached locally to minimize API calls
-- If multiple rates exist for same month/year, use most recent fetch
+**Validation Rules**:
+- date must be unique
+- rate must be positive
+- source must be "TCMB" (constitutional requirement)
 
-**Example**:
-```python
-ExchangeRate(
-    id=1,
-    month=11,
-    year=2022,
-    rate_tl_per_usd=18.65,  # Monthly average
-    source="TCMB",
-    fetched_at=datetime(2025, 10, 5, 10, 30)
-)
-```
+**Relationships**:
+- Referenced by PaymentRecord for USD calculations
 
-### 3. PaymentRecord
-
-Calculated monthly payments combining rental agreements and exchange rates.
-
+### PaymentRecord
+**Purpose**: Individual rental payment with USD equivalent
 **Attributes**:
-```python
-id: int  # Primary key
-agreement_id: int  # Foreign key to RentalAgreement
-month: int  # 1-12
-year: int  # e.g., 2024
-amount_tl: decimal  # Actual amount paid in TL
-amount_usd: decimal  # Calculated USD equivalent
-exchange_rate_id: int  # Foreign key to ExchangeRate used
-calculated_at: datetime  # When this record was generated
-```
+- `id`: Integer (Primary Key, Auto-increment)
+- `agreement_id`: Integer (Foreign Key to RentalAgreement)
+- `payment_date`: Date (Required)
+- `amount_tl`: Decimal (Required, precision 2)
+- `amount_usd`: Decimal (Required, precision 2)
+- `exchange_rate`: Decimal (Required, precision 4)
+- `created_at`: DateTime (Auto-generated)
+
+**Validation Rules**:
+- payment_date must be within agreement period
+- amount_tl must be positive
+- amount_usd must be positive
+- exchange_rate must be positive
 
 **Relationships**:
 - Many-to-one with RentalAgreement
-- Many-to-one with ExchangeRate
+- References ExchangeRate for rate used
 
-**Business Rules**:
-- amount_tl determined by agreement base_amount or conditional rules
-- amount_usd = amount_tl / exchange_rate
-- Unique constraint on (agreement_id, month, year)
-- Records are recalculated if exchange rates update
-
-**Calculation Logic**:
-```python
-def calculate_payment(agreement, month, year, exchange_rate):
-    # Check if conditional rules apply
-    if agreement.conditional_rules:
-        for rule in agreement.conditional_rules['rules']:
-            if evaluate_condition(rule['condition'], exchange_rate.rate_tl_per_usd):
-                amount_tl = rule['amount_tl']
-                break
-    else:
-        amount_tl = agreement.base_amount_tl
-    
-    amount_usd = amount_tl / exchange_rate.rate_tl_per_usd
-    
-    return PaymentRecord(
-        agreement_id=agreement.id,
-        month=month,
-        year=year,
-        amount_tl=amount_tl,
-        amount_usd=amount_usd,
-        exchange_rate_id=exchange_rate.id
-    )
-```
-
-**Example**:
-```python
-PaymentRecord(
-    id=1,
-    agreement_id=1,
-    month=11,
-    year=2022,
-    amount_tl=15000,
-    amount_usd=804.29,  # 15000 / 18.65
-    exchange_rate_id=1
-)
-```
-
-### 4. MarketRate
-
-Comparable apartment rental rates parsed from sahibinden.com screenshots.
-
+### MarketRate
+**Purpose**: Comparable apartment rental data from screenshots
 **Attributes**:
-```python
-id: int  # Primary key
-amount_tl: decimal  # Rental price in TL
-location: Optional[str]  # Area/district if parseable
-screenshot_filename: str  # Original screenshot file reference
-parsed_at: datetime  # When OCR parsing occurred
-confidence: Optional[float]  # OCR confidence score (0-1)
-verified: bool  # User confirmed this is accurate
-notes: Optional[str]  # User notes about this listing
-```
+- `id`: Integer (Primary Key, Auto-increment)
+- `amount_tl`: Decimal (Required, precision 2)
+- `location`: String (Optional, parsed from screenshot)
+- `screenshot_filename`: String (Required)
+- `confidence`: Decimal (Optional, OCR confidence score)
+- `created_at`: DateTime (Auto-generated)
 
-**Business Rules**:
-- amount_tl must be > 0
-- screenshot_filename must be unique
-- If confidence < 0.7, mark for user verification
-- User can manually edit amount if OCR was wrong
+**Validation Rules**:
+- amount_tl must be positive
+- screenshot_filename must be provided
+- confidence must be between 0 and 1 if provided
 
-**Example**:
-```python
-MarketRate(
-    id=1,
-    amount_tl=38000,
-    location="Kadıköy",  # Extracted from screenshot if possible
-    screenshot_filename="sahibinden_2025_10_05_001.png",
-    parsed_at=datetime(2025, 10, 5, 11, 00),
-    confidence=0.92,
-    verified=True,
-    notes="3+1, 120m2, similar building"
-)
-```
+**Relationships**:
+- None (standalone market data)
 
-### 5. InflationData
-
-Turkish official inflation rates (for showing legal maximum rent increase).
-
+### InflationData
+**Purpose**: Official Turkish inflation rates from TCMB
 **Attributes**:
-```python
-id: int  # Primary key
-month: int  # 1-12
-year: int  # e.g., 2024
-inflation_rate_percent: decimal  # e.g., 64.77 for 64.77%
-source: str  # "TUIK" (Turkish Statistical Institute)
-notes: Optional[str]  # Context about this rate
-created_at: datetime
-```
+- `id`: Integer (Primary Key, Auto-increment)
+- `period`: Date (Required, unique)
+- `inflation_rate`: Decimal (Required, precision 2)
+- `source`: String (Required, default: "TCMB")
+- `created_at`: DateTime (Auto-generated)
 
-**Business Rules**:
-- Unique constraint on (month, year)
-- inflation_rate_percent can be negative (deflation)
-- Used to calculate legal maximum rent increase:
-  - legal_max_increase = previous_rent * (1 + inflation_rate / 100)
+**Validation Rules**:
+- period must be unique
+- inflation_rate must be between -100 and 1000 (realistic range)
+- source must be "TCMB"
 
-**Example**:
-```python
-InflationData(
-    id=1,
-    month=10,
-    year=2024,
-    inflation_rate_percent=49.38,  # Turkish YoY inflation
-    source="TUIK",
-    notes="Annual inflation rate"
-)
-```
+**Relationships**:
+- Referenced by LegalRule for period-specific rules
 
-## Entity Relationships
+### LegalRule
+**Purpose**: Applicable rent increase regulations by period
+**Attributes**:
+- `id`: Integer (Primary Key, Auto-increment)
+- `start_date`: Date (Required)
+- `end_date`: Date (Optional, null for current rule)
+- `rule_type`: String (Required, "fixed_cap" or "tufe")
+- `cap_percentage`: Decimal (Optional, for fixed_cap rules)
+- `description`: String (Required, human-readable description)
+- `created_at`: DateTime (Auto-generated)
 
-```
-RentalAgreement (1) ──→ (N) PaymentRecord
-                                ↓
-                          ExchangeRate (N) ──→ (1)
+**Validation Rules**:
+- start_date must be before end_date (if provided)
+- rule_type must be "fixed_cap" or "tufe"
+- cap_percentage required for fixed_cap rules
+- No overlapping rules allowed
 
-MarketRate (standalone, no direct relationships)
+**Relationships**:
+- Referenced by AgreementPeriod for rule determination
 
-InflationData (standalone, used for calculations)
-```
+### AgreementPeriod
+**Purpose**: Time segments of agreements that determine legal rules
+**Attributes**:
+- `id`: Integer (Primary Key, Auto-increment)
+- `agreement_id`: Integer (Foreign Key to RentalAgreement)
+- `start_date`: Date (Required)
+- `end_date`: Date (Required)
+- `legal_rule_id`: Integer (Foreign Key to LegalRule)
+- `created_at`: DateTime (Auto-generated)
 
-**Key Relationships**:
-1. One `RentalAgreement` has many `PaymentRecords` (one per month)
-2. Each `PaymentRecord` references one `ExchangeRate` for that month
-3. `MarketRate` and `InflationData` are reference data (no foreign keys)
+**Validation Rules**:
+- start_date must be before end_date
+- period must be within agreement dates
+- legal_rule_id must reference valid rule
 
-## SQLite Schema
+**Relationships**:
+- Many-to-one with RentalAgreement
+- Many-to-one with LegalRule
 
+### NegotiationMode
+**Purpose**: User preference for presentation style
+**Attributes**:
+- `id`: Integer (Primary Key, Auto-increment)
+- `mode`: String (Required, "calm" or "assertive")
+- `description`: String (Required, user-friendly description)
+- `created_at`: DateTime (Auto-generated)
+
+**Validation Rules**:
+- mode must be "calm" or "assertive"
+- Only one active mode allowed (enforced at application level)
+
+**Relationships**:
+- Referenced by UI components for styling
+
+## Database Schema
+
+### Tables
 ```sql
+-- Rental Agreements
 CREATE TABLE rental_agreements (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     start_date DATE NOT NULL,
     end_date DATE,
-    base_amount_tl DECIMAL(10, 2) NOT NULL,
-    conditional_rules TEXT,  -- JSON stored as TEXT
+    base_amount_tl DECIMAL(10,2) NOT NULL,
+    conditional_rules TEXT, -- JSON
     notes TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Exchange Rates
 CREATE TABLE exchange_rates (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    month INTEGER NOT NULL CHECK(month BETWEEN 1 AND 12),
-    year INTEGER NOT NULL,
-    rate_tl_per_usd DECIMAL(10, 4) NOT NULL,
-    source VARCHAR(50) NOT NULL,
-    fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(month, year)
+    date DATE NOT NULL UNIQUE,
+    rate DECIMAL(10,4) NOT NULL,
+    source VARCHAR(50) NOT NULL DEFAULT 'TCMB',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Payment Records
 CREATE TABLE payment_records (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     agreement_id INTEGER NOT NULL,
-    month INTEGER NOT NULL CHECK(month BETWEEN 1 AND 12),
-    year INTEGER NOT NULL,
-    amount_tl DECIMAL(10, 2) NOT NULL,
-    amount_usd DECIMAL(10, 2) NOT NULL,
-    exchange_rate_id INTEGER NOT NULL,
-    calculated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (agreement_id) REFERENCES rental_agreements(id),
-    FOREIGN KEY (exchange_rate_id) REFERENCES exchange_rates(id),
-    UNIQUE(agreement_id, month, year)
+    payment_date DATE NOT NULL,
+    amount_tl DECIMAL(10,2) NOT NULL,
+    amount_usd DECIMAL(10,2) NOT NULL,
+    exchange_rate DECIMAL(10,4) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (agreement_id) REFERENCES rental_agreements(id)
 );
 
+-- Market Rates
 CREATE TABLE market_rates (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    amount_tl DECIMAL(10, 2) NOT NULL,
+    amount_tl DECIMAL(10,2) NOT NULL,
     location VARCHAR(255),
-    screenshot_filename VARCHAR(255) NOT NULL UNIQUE,
-    parsed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    confidence DECIMAL(3, 2),
-    verified BOOLEAN DEFAULT FALSE,
-    notes TEXT
+    screenshot_filename VARCHAR(255) NOT NULL,
+    confidence DECIMAL(3,2),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Inflation Data
 CREATE TABLE inflation_data (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    month INTEGER NOT NULL CHECK(month BETWEEN 1 AND 12),
-    year INTEGER NOT NULL,
-    inflation_rate_percent DECIMAL(6, 2) NOT NULL,
-    source VARCHAR(50) NOT NULL,
-    notes TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(month, year)
+    period DATE NOT NULL UNIQUE,
+    inflation_rate DECIMAL(5,2) NOT NULL,
+    source VARCHAR(50) NOT NULL DEFAULT 'TCMB',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Indexes for performance
+-- Legal Rules
+CREATE TABLE legal_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    start_date DATE NOT NULL,
+    end_date DATE,
+    rule_type VARCHAR(20) NOT NULL,
+    cap_percentage DECIMAL(5,2),
+    description VARCHAR(255) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Agreement Periods
+CREATE TABLE agreement_periods (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agreement_id INTEGER NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    legal_rule_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (agreement_id) REFERENCES rental_agreements(id),
+    FOREIGN KEY (legal_rule_id) REFERENCES legal_rules(id)
+);
+
+-- Negotiation Modes
+CREATE TABLE negotiation_modes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mode VARCHAR(20) NOT NULL UNIQUE,
+    description VARCHAR(255) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Indexes
+```sql
+-- Performance indexes
+CREATE INDEX idx_rental_agreements_dates ON rental_agreements(start_date, end_date);
+CREATE INDEX idx_exchange_rates_date ON exchange_rates(date);
 CREATE INDEX idx_payment_records_agreement ON payment_records(agreement_id);
-CREATE INDEX idx_payment_records_date ON payment_records(year, month);
-CREATE INDEX idx_exchange_rates_date ON exchange_rates(year, month);
-CREATE INDEX idx_inflation_date ON inflation_data(year, month);
+CREATE INDEX idx_payment_records_date ON payment_records(payment_date);
+CREATE INDEX idx_legal_rules_dates ON legal_rules(start_date, end_date);
+CREATE INDEX idx_agreement_periods_agreement ON agreement_periods(agreement_id);
 ```
 
-## Python Class Definitions
+## Data Relationships
 
-```python
-from dataclasses import dataclass
-from datetime import date, datetime
-from decimal import Decimal
-from typing import Optional, Dict, List
-
-@dataclass
-class RentalAgreement:
-    id: Optional[int]
-    start_date: date
-    end_date: Optional[date]
-    base_amount_tl: Decimal
-    conditional_rules: Optional[Dict]
-    notes: Optional[str]
-    created_at: datetime
-    updated_at: datetime
-
-@dataclass
-class ExchangeRate:
-    id: Optional[int]
-    month: int
-    year: int
-    rate_tl_per_usd: Decimal
-    source: str
-    fetched_at: datetime
-
-@dataclass
-class PaymentRecord:
-    id: Optional[int]
-    agreement_id: int
-    month: int
-    year: int
-    amount_tl: Decimal
-    amount_usd: Decimal
-    exchange_rate_id: int
-    calculated_at: datetime
-
-@dataclass
-class MarketRate:
-    id: Optional[int]
-    amount_tl: Decimal
-    location: Optional[str]
-    screenshot_filename: str
-    parsed_at: datetime
-    confidence: Optional[float]
-    verified: bool
-    notes: Optional[str]
-
-@dataclass
-class InflationData:
-    id: Optional[int]
-    month: int
-    year: int
-    inflation_rate_percent: Decimal
-    source: str
-    notes: Optional[str]
-    created_at: datetime
+### Entity Relationship Diagram
+```
+RentalAgreement (1) ----< (N) PaymentRecord
+RentalAgreement (1) ----< (N) AgreementPeriod
+LegalRule (1) ----< (N) AgreementPeriod
+ExchangeRate (1) ----< (N) PaymentRecord [via rate reference]
 ```
 
-## Data Validation Rules
+### Business Rules
+1. **No Overlapping Agreements**: Only one active agreement per time period
+2. **Legal Rule Application**: Agreements spanning July 1, 2024 use different rules for each period
+3. **Exchange Rate Consistency**: All USD calculations use TCMB rates
+4. **Data Source Attribution**: All data must include source information
+5. **Negotiation Mode**: Only one active mode at a time
 
-1. **Date Validation**:
-   - start_date < end_date (if end_date provided)
-   - Dates must be valid (month 1-12, reasonable years)
+## Data Validation
 
-2. **Amount Validation**:
-   - All monetary amounts must be > 0
-   - Precision: 2 decimal places for TL, USD
-   - Exchange rates: 4 decimal places
+### Input Validation
+- Date ranges must be logical (start < end)
+- Monetary amounts must be positive
+- JSON fields must be valid JSON
+- Required fields cannot be null
 
-3. **Foreign Key Integrity**:
-   - payment_records.agreement_id must reference existing rental_agreement
-   - payment_records.exchange_rate_id must reference existing exchange_rate
+### Business Logic Validation
+- Agreement periods cannot overlap
+- Payment dates must be within agreement periods
+- Exchange rates must be from TCMB
+- Legal rules must be consistent with Turkish law
 
-4. **Uniqueness Constraints**:
-   - (month, year) unique in exchange_rates
-   - (month, year) unique in inflation_data
-   - (agreement_id, month, year) unique in payment_records
-   - screenshot_filename unique in market_rates
+### Data Integrity
+- Foreign key constraints enforced
+- Unique constraints on critical fields
+- Check constraints on value ranges
+- Application-level validation for complex rules
 
-## Data Flow
+## Data Migration
 
-1. **User enters rental agreements** → `rental_agreements` table
-2. **App fetches exchange rates** → `exchange_rates` table (cached)
-3. **App calculates payments** → `payment_records` table (derived)
-4. **User uploads screenshots** → OCR → `market_rates` table
-5. **User uploads/enters inflation** → `inflation_data` table
+### Initial Data Setup
+```sql
+-- Insert default legal rules
+INSERT INTO legal_rules (start_date, end_date, rule_type, cap_percentage, description) VALUES
+('2020-01-01', '2024-06-30', 'fixed_cap', 25.00, '+25% (limit until July 2024)'),
+('2024-07-01', NULL, 'tufe', NULL, '+CPI (Yearly TÜFE)');
 
-## Storage Estimates
+-- Insert default negotiation modes
+INSERT INTO negotiation_modes (mode, description) VALUES
+('calm', 'Professional presentation with subdued visuals'),
+('assertive', 'Bold presentation highlighting changes');
+```
 
-| Entity | Records | Size per Record | Total Size |
-|--------|---------|-----------------|------------|
-| rental_agreements | 10 | 200 bytes | 2 KB |
-| exchange_rates | 50 | 100 bytes | 5 KB |
-| payment_records | 150 | 150 bytes | 22 KB |
-| market_rates | 100 | 300 bytes | 30 KB |
-| inflation_data | 50 | 100 bytes | 5 KB |
-| **Total** | **360** | - | **~64 KB** |
-
-**Plus Screenshots**: 100 screenshots × 500 KB avg = 50 MB  
-**Grand Total**: ~50 MB (well under 100MB constraint)
-
-## Next Steps
-
-Phase 1 continues with:
-- **contracts/**: Service interface definitions
-- **quickstart.md**: Manual testing guide
-- **Agent context update**: Tech stack summary for Cursor
-
+### Data Backup Strategy
+- Export functionality for all user data
+- SQLite file backup before major updates
+- JSON export for data portability
+- Screenshot files stored with metadata
