@@ -1,6 +1,29 @@
 """
 Inflation data service for Turkish inflation rates.
-Supports CSV import and legal maximum rent increase calculations.
+Supports CSV import, legal maximum rent increase calculations, and secure TÜFE data management.
+
+Features:
+- CSV import and export of inflation data
+- Legal maximum rent increase calculations (25% cap until June 2024, TÜFE after July 2024)
+- Secure TÜFE data fetching from TCMB EVDS API
+- TÜFE data caching with 24-hour expiration
+- Data source attribution and tracking
+- Manual TÜFE data entry and validation
+- Integration with TCMB API for official data
+
+TÜFE Data Management:
+- fetch_tufe_from_tcmb_api(): Fetch TÜFE data from TCMB EVDS API
+- cache_tufe_data(): Cache TÜFE data with source attribution
+- get_cached_tufe_data(): Retrieve cached TÜFE data
+- is_tufe_cache_valid(): Check cache validity
+- get_tufe_data_sources(): Get available TÜFE data sources
+- get_active_tufe_source(): Get currently active TÜFE source
+
+Security:
+- API keys are managed securely through TufeConfigService
+- All API calls use HTTPS
+- Data validation before storage
+- Source attribution for data lineage
 """
 import pandas as pd
 from decimal import Decimal
@@ -10,7 +33,7 @@ import io
 
 from src.models import InflationData
 from src.storage import DataStore
-from src.services.exceptions import CSVParseError
+from src.services.exceptions import CSVParseError, TufeApiError
 from src.utils import validate_month, validate_year
 
 
@@ -321,4 +344,107 @@ class InflationService:
         except Exception as e:
             # Other errors (parsing, etc.)
             return None
+    
+    def fetch_tufe_from_tcmb_api(self, year: int, api_key: str) -> Optional[Decimal]:
+        """
+        Fetch TÜFE data from TCMB EVDS API.
+        
+        Args:
+            year: Year to fetch TÜFE for
+            api_key: TCMB EVDS API key
+            
+        Returns:
+            TÜFE rate as Decimal or None if not available
+            
+        Raises:
+            TufeApiError: If API call fails
+            TufeValidationError: If data validation fails
+        """
+        try:
+            from src.services.tcmb_api_client import TCMBApiClient
+            from src.services.exceptions import TufeApiError, TufeValidationError
+            
+            # Validate inputs
+            if not api_key or not api_key.strip():
+                raise TufeValidationError("API key is required")
+            
+            if not (2000 <= year <= 2100):
+                raise TufeValidationError(f"Invalid year: {year}")
+            
+            # Create API client
+            client = TCMBApiClient(api_key)
+            
+            # Fetch data from API
+            response = client.fetch_tufe_data(year)
+            
+            # Extract TÜFE rate
+            tufe_rate = client.extract_tufe_rate(response)
+            
+            if tufe_rate is not None:
+                # Cache the data
+                self.cache_tufe_data(year, tufe_rate, "TCMB EVDS API", str(response))
+            
+            return tufe_rate
+            
+        except Exception as e:
+            if isinstance(e, (TufeApiError, TufeValidationError)):
+                raise
+            else:
+                raise TufeApiError(f"Failed to fetch TÜFE from TCMB API: {e}")
+    
+    def get_tufe_data_sources(self) -> List:
+        """Get all available TÜFE data sources."""
+        try:
+            from src.services.tufe_data_source_service import TufeDataSourceService
+            source_service = TufeDataSourceService(self.data_store)
+            return source_service.get_all_sources()
+        except Exception as e:
+            raise TufeApiError(f"Failed to get TÜFE data sources: {e}")
+    
+    def get_active_tufe_source(self) -> Optional:
+        """Get the currently active TÜFE data source."""
+        try:
+            from src.services.tufe_data_source_service import TufeDataSourceService
+            source_service = TufeDataSourceService(self.data_store)
+            return source_service.get_active_source()
+        except Exception as e:
+            raise TufeApiError(f"Failed to get active TÜFE source: {e}")
+    
+    def cache_tufe_data(self, year: int, rate: Decimal, source: str, api_response: str) -> int:
+        """
+        Cache TÜFE data with source attribution.
+        
+        Args:
+            year: Year for the data
+            rate: TÜFE rate
+            source: Data source name
+            api_response: Raw API response
+            
+        Returns:
+            Cache entry ID
+        """
+        try:
+            from src.services.tufe_cache_service import TufeCacheService
+            cache_service = TufeCacheService(self.data_store)
+            return cache_service.cache_data(year, rate, source, api_response)
+        except Exception as e:
+            raise TufeApiError(f"Failed to cache TÜFE data: {e}")
+    
+    def get_cached_tufe_data(self, year: int) -> Optional:
+        """Get cached TÜFE data for a year."""
+        try:
+            from src.services.tufe_cache_service import TufeCacheService
+            cache_service = TufeCacheService(self.data_store)
+            return cache_service.get_cached_data(year)
+        except Exception as e:
+            raise TufeApiError(f"Failed to get cached TÜFE data: {e}")
+    
+    def is_tufe_cache_valid(self, year: int) -> bool:
+        """Check if TÜFE cache is valid for a year."""
+        try:
+            from src.services.tufe_cache_service import TufeCacheService
+            cache_service = TufeCacheService(self.data_store)
+            return cache_service.is_cache_valid(year)
+        except Exception as e:
+            raise TufeApiError(f"Failed to check TÜFE cache validity: {e}")
 

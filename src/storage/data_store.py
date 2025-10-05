@@ -17,6 +17,9 @@ from src.models import (
 )
 from src.models.negotiation_settings import NegotiationSettings
 from src.models.legal_rule import LegalRule
+from src.models.tufe_data_source import TufeDataSource
+from src.models.tufe_api_key import TufeApiKey
+from src.models.tufe_data_cache import TufeDataCache
 
 
 class DatabaseError(Exception):
@@ -478,5 +481,245 @@ class DataStore:
             effective_end=date.fromisoformat(row['effective_end']) if row['effective_end'] else None,
             rate=Decimal(str(row['rate'])) if row['rate'] else None,
             label=row['label']
+        )
+    
+    # TÜFE Data Source methods
+    def save_tufe_data_source(self, source: TufeDataSource) -> int:
+        """Save a TÜFE data source."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            if source.id is None:
+                # Insert new source
+                cursor.execute("""
+                    INSERT INTO tufe_data_sources 
+                    (source_name, api_endpoint, series_code, data_format, requires_auth, 
+                     rate_limit_per_hour, last_verified, is_active)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    source.source_name,
+                    source.api_endpoint,
+                    source.series_code,
+                    source.data_format,
+                    source.requires_auth,
+                    source.rate_limit_per_hour,
+                    source.last_verified,
+                    source.is_active
+                ))
+                return cursor.lastrowid
+            else:
+                # Update existing source
+                cursor.execute("""
+                    UPDATE tufe_data_sources 
+                    SET source_name=?, api_endpoint=?, series_code=?, data_format=?, 
+                        requires_auth=?, rate_limit_per_hour=?, last_verified=?, is_active=?
+                    WHERE id=?
+                """, (
+                    source.source_name,
+                    source.api_endpoint,
+                    source.series_code,
+                    source.data_format,
+                    source.requires_auth,
+                    source.rate_limit_per_hour,
+                    source.last_verified,
+                    source.is_active,
+                    source.id
+                ))
+                return source.id
+    
+    def get_tufe_data_source_by_id(self, source_id: int) -> Optional[sqlite3.Row]:
+        """Get a TÜFE data source by ID."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT * FROM tufe_data_sources WHERE id=?", (source_id,))
+            return cursor.fetchone()
+    
+    def get_all_tufe_data_sources(self) -> List[sqlite3.Row]:
+        """Get all TÜFE data sources."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT * FROM tufe_data_sources ORDER BY created_at DESC")
+            return cursor.fetchall()
+    
+    def get_active_tufe_data_source(self) -> Optional[sqlite3.Row]:
+        """Get the active TÜFE data source."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT * FROM tufe_data_sources WHERE is_active=1 LIMIT 1")
+            return cursor.fetchone()
+    
+    def _row_to_tufe_data_source(self, row) -> TufeDataSource:
+        """Convert database row to TufeDataSource object."""
+        return TufeDataSource(
+            id=row['id'],
+            source_name=row['source_name'],
+            api_endpoint=row['api_endpoint'],
+            series_code=row['series_code'],
+            data_format=row['data_format'],
+            requires_auth=bool(row['requires_auth']),
+            rate_limit_per_hour=row['rate_limit_per_hour'],
+            last_verified=datetime.fromisoformat(row['last_verified']) if row['last_verified'] else None,
+            is_active=bool(row['is_active']),
+            created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None
+        )
+    
+    # TÜFE API Key methods
+    def save_tufe_api_key(self, api_key: TufeApiKey) -> int:
+        """Save a TÜFE API key."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            if api_key.id is None:
+                # Insert new API key
+                cursor.execute("""
+                    INSERT INTO tufe_api_keys 
+                    (key_name, api_key, source_id, last_used, is_active)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (
+                    api_key.key_name,
+                    api_key._encrypt_key(api_key.api_key),  # Store encrypted
+                    api_key.source_id,
+                    api_key.last_used,
+                    api_key.is_active
+                ))
+                return cursor.lastrowid
+            else:
+                # Update existing API key
+                cursor.execute("""
+                    UPDATE tufe_api_keys 
+                    SET key_name=?, api_key=?, source_id=?, last_used=?, is_active=?
+                    WHERE id=?
+                """, (
+                    api_key.key_name,
+                    api_key._encrypt_key(api_key.api_key),  # Store encrypted
+                    api_key.source_id,
+                    api_key.last_used,
+                    api_key.is_active,
+                    api_key.id
+                ))
+                return api_key.id
+    
+    def get_tufe_api_key_by_id(self, key_id: int) -> Optional[sqlite3.Row]:
+        """Get a TÜFE API key by ID."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT * FROM tufe_api_keys WHERE id=?", (key_id,))
+            return cursor.fetchone()
+    
+    def get_active_tufe_api_key(self, source_id: int) -> Optional[sqlite3.Row]:
+        """Get the active API key for a source."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT * FROM tufe_api_keys WHERE source_id=? AND is_active=1 LIMIT 1", (source_id,))
+            return cursor.fetchone()
+    
+    def get_tufe_api_keys_for_source(self, source_id: int) -> List[sqlite3.Row]:
+        """Get all API keys for a source."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT * FROM tufe_api_keys WHERE source_id=? ORDER BY created_at DESC", (source_id,))
+            return cursor.fetchall()
+    
+    def _row_to_tufe_api_key(self, row) -> TufeApiKey:
+        """Convert database row to TufeApiKey object."""
+        # Decrypt the API key
+        decrypted_key = TufeApiKey._decrypt_key(row['api_key'])
+        
+        return TufeApiKey(
+            id=row['id'],
+            key_name=row['key_name'],
+            api_key=decrypted_key,
+            source_id=row['source_id'],
+            created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None,
+            last_used=datetime.fromisoformat(row['last_used']) if row['last_used'] else None,
+            is_active=bool(row['is_active'])
+        )
+    
+    # TÜFE Data Cache methods
+    def save_tufe_data_cache(self, cache_entry: TufeDataCache) -> int:
+        """Save a TÜFE data cache entry."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            if cache_entry.id is None:
+                # Insert new cache entry
+                cursor.execute("""
+                    INSERT INTO tufe_data_cache 
+                    (year, tufe_rate, source_name, fetched_at, expires_at, api_response, is_validated)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    cache_entry.year,
+                    str(cache_entry.tufe_rate),
+                    cache_entry.source_name,
+                    cache_entry.fetched_at,
+                    cache_entry.expires_at,
+                    cache_entry.api_response,
+                    cache_entry.is_validated
+                ))
+                return cursor.lastrowid
+            else:
+                # Update existing cache entry
+                cursor.execute("""
+                    UPDATE tufe_data_cache 
+                    SET year=?, tufe_rate=?, source_name=?, fetched_at=?, expires_at=?, 
+                        api_response=?, is_validated=?
+                    WHERE id=?
+                """, (
+                    cache_entry.year,
+                    str(cache_entry.tufe_rate),
+                    cache_entry.source_name,
+                    cache_entry.fetched_at,
+                    cache_entry.expires_at,
+                    cache_entry.api_response,
+                    cache_entry.is_validated,
+                    cache_entry.id
+                ))
+                return cache_entry.id
+    
+    def get_tufe_data_cache(self, year: int) -> Optional[sqlite3.Row]:
+        """Get TÜFE data cache for a year."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT * FROM tufe_data_cache WHERE year=? ORDER BY fetched_at DESC LIMIT 1", (year,))
+            return cursor.fetchone()
+    
+    def get_all_tufe_data_cache(self) -> List[sqlite3.Row]:
+        """Get all TÜFE data cache entries."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT * FROM tufe_data_cache ORDER BY year DESC, fetched_at DESC")
+            return cursor.fetchall()
+    
+    def _row_to_tufe_data_cache(self, row) -> TufeDataCache:
+        """Convert database row to TufeDataCache object."""
+        return TufeDataCache(
+            id=row['id'],
+            year=row['year'],
+            tufe_rate=Decimal(str(row['tufe_rate'])),
+            source_name=row['source_name'],
+            fetched_at=datetime.fromisoformat(row['fetched_at']) if row['fetched_at'] else None,
+            expires_at=datetime.fromisoformat(row['expires_at']) if row['expires_at'] else None,
+            api_response=row['api_response'],
+            is_validated=bool(row['is_validated']),
+            created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None
         )
 

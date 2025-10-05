@@ -104,6 +104,19 @@ class InflationData:
         # In a real implementation, this would check if TÜFE data exists for the given year
         return False
     
+    def is_from_tcmb_api(self) -> bool:
+        """Check if this data was fetched from TCMB API."""
+        return "TCMB" in self.source.upper() or "EVDS" in self.source.upper()
+    
+    def get_source_attribution(self) -> str:
+        """Get formatted source attribution string."""
+        if self.is_from_tcmb_api():
+            return "Data source: TCMB EVDS API"
+        elif "Manual" in self.source:
+            return "Data source: Manual Entry"
+        else:
+            return f"Data source: {self.source}"
+    
     def __repr__(self) -> str:
         return (
             f"InflationData({self.year}-{self.month:02d}, "

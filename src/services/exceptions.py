@@ -42,3 +42,33 @@ class TufeDataError(ServiceError):
     """Raised when TÜFE data is unavailable or invalid"""
     pass
 
+
+class TufeApiError(ServiceError):
+    """Raised when TÜFE API operations fail"""
+    pass
+
+
+class TufeValidationError(ServiceError):
+    """Raised when TÜFE data validation fails"""
+    pass
+
+
+class TufeDataSourceError(ServiceError):
+    """Raised when TÜFE data source operations fail"""
+    pass
+
+
+class TufeApiKeyError(ServiceError):
+    """Raised when TÜFE API key operations fail"""
+    pass
+
+
+class TufeCacheError(ServiceError):
+    """Raised when TÜFE cache operations fail"""
+    pass
+
+
+class TufeConfigError(ServiceError):
+    """Raised when TÜFE configuration operations fail"""
+    pass
+

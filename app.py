@@ -1,6 +1,18 @@
 """
 Kira Prolongation Support - Streamlit Application
 Main entry point for the rental fee negotiation support tool.
+
+Features:
+- Historical TL/USD payment tracking
+- Market rate comparison and analysis
+- Future payment projections
+- TCMB exchange rate integration
+- TÜFE (Turkish CPI) data management with secure TCMB API integration
+- Legal rent increase calculations (25% cap until June 2024, TÜFE after July 2024)
+- Negotiation mode settings (Calm/Assertive)
+- Data source attribution and export functionality
+- Secure API key management for TCMB EVDS API
+- TÜFE data caching with 24-hour expiration
 """
 import streamlit as st
 from decimal import Decimal
@@ -16,7 +28,12 @@ from src.services import (
     CalculationService,
     ExportService,
     NegotiationSettingsService,
-    LegalRuleService
+    LegalRuleService,
+    TufeDataSourceService,
+    TufeApiKeyService,
+    TufeCacheService,
+    TCMBApiClient,
+    TufeConfigService
 )
 from src.models import RentalAgreement
 from src.utils import ChartGenerator
@@ -32,17 +49,37 @@ st.set_page_config(
 # Initialize services (cached)
 @st.cache_resource
 def init_services():
-    """Initialize all services with DataStore"""
+    """
+    Initialize all services with DataStore.
+    
+    Returns:
+        dict: Dictionary containing all initialized services including:
+            - Core services: data_store, exchange_rate_service, inflation_service, 
+              calculation_service, export_service, chart_generator
+            - Negotiation services: negotiation_settings_service, legal_rule_service
+            - TÜFE data source services: tufe_data_source_service, tufe_api_key_service,
+              tufe_cache_service, tufe_config_service, tcmb_api_client
+    """
     data_store = DataStore()
     return {
+        # Core services
         'data_store': data_store,
         'exchange_rate_service': ExchangeRateService(data_store),
         'inflation_service': InflationService(data_store),
         'calculation_service': CalculationService(),
         'export_service': ExportService(),
         'chart_generator': ChartGenerator(),
+        
+        # Negotiation services
         'negotiation_settings_service': NegotiationSettingsService(),
-        'legal_rule_service': LegalRuleService(data_store)
+        'legal_rule_service': LegalRuleService(data_store),
+        
+        # TÜFE data source services for secure TCMB API integration
+        'tufe_data_source_service': TufeDataSourceService(data_store),  # Manages TÜFE data sources
+        'tufe_api_key_service': TufeApiKeyService(data_store),          # Manages API keys securely
+        'tufe_cache_service': TufeCacheService(data_store),             # Manages TÜFE data caching
+        'tufe_config_service': TufeConfigService(),                     # Manages TÜFE configuration
+        'tcmb_api_client': TCMBApiClient('')                            # TCMB EVDS API client
     }
 
 services = init_services()
@@ -542,6 +579,90 @@ elif page == "📊 Inflation Data":
             except Exception as e:
                 st.error(f"❌ Error: {e}")
     
+    # TCMB API Key Configuration
+    st.markdown("---")
+    st.subheader("🔑 TCMB API Configuration")
+    
+    # Documentation for TCMB API integration
+    with st.expander("ℹ️ About TCMB API Integration"):
+        st.markdown("""
+        **TCMB EVDS API Integration**
+        
+        This section provides secure integration with the Turkish Central Bank (TCMB) 
+        Electronic Data Delivery System (EVDS) API for fetching official TÜFE (Turkish CPI) data.
+        
+        **Features:**
+        - 🔐 **Secure API Key Management**: API keys are encrypted and stored securely
+        - 📊 **Official TÜFE Data**: Direct access to official Turkish inflation rates
+        - ⚡ **Smart Caching**: 24-hour cache to minimize API calls and improve performance
+        - 🔄 **Automatic Fallback**: Falls back to manual entry if API is unavailable
+        - 📈 **Data Source Attribution**: All exports include proper data source attribution
+        
+        **How to get a TCMB API Key:**
+        1. Visit [TCMB EVDS](https://evds2.tcmb.gov.tr/)
+        2. Register for an account
+        3. Generate an API key from your dashboard
+        4. Enter the key below to start fetching official TÜFE data
+        """)
+    
+    # Check if API key is configured
+    is_api_configured = services['tufe_config_service'].is_api_key_configured()
+    api_key_valid = False
+    
+    if is_api_configured:
+        api_key_valid = services['tufe_config_service'].validate_api_key()
+        if api_key_valid:
+            st.success("✅ TCMB API key is configured and valid")
+        else:
+            st.warning("⚠️ TCMB API key is configured but not valid")
+    else:
+        st.warning("⚠️ TCMB API key is not configured")
+    
+    # API Key Configuration Form
+    with st.expander("⚙️ Configure TCMB API Key", expanded=not is_api_configured):
+        st.info("Get your TCMB EVDS API key from: https://evds2.tcmb.gov.tr/index.php?/evds/login")
+        
+        with st.form("tcmb_api_config"):
+            api_key = st.text_input(
+                "TCMB EVDS API Key",
+                type="password",
+                help="Enter your TCMB EVDS API key for secure TÜFE data fetching",
+                placeholder="Enter your API key here..."
+            )
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.form_submit_button("🔑 Validate API Key"):
+                    if api_key:
+                        try:
+                            # Test the API key
+                            test_client = TCMBApiClient(api_key)
+                            is_valid = test_client.validate_api_key()
+                            
+                            if is_valid:
+                                # Save the API key
+                                services['tufe_config_service'].set_tcmb_api_key(api_key)
+                                st.success("✅ API key validated and saved successfully!")
+                                st.rerun()
+                            else:
+                                st.error("❌ API key validation failed. Please check your key.")
+                        except Exception as e:
+                            st.error(f"❌ Error validating API key: {e}")
+                    else:
+                        st.error("❌ Please enter an API key")
+            
+            with col2:
+                if st.form_submit_button("💾 Save API Key"):
+                    if api_key:
+                        try:
+                            services['tufe_config_service'].set_tcmb_api_key(api_key)
+                            st.success("✅ API key saved successfully!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ Error saving API key: {e}")
+                    else:
+                        st.error("❌ Please enter an API key")
+    
     # TÜFE Data Handling
     # NEW FEATURE: TÜFE Data Handling
     # - Handles TÜFE data unavailability with fallback to manual entry
@@ -589,26 +710,99 @@ elif page == "📊 Inflation Data":
         st.write("**TÜFE Data Source**")
         st.info("📊 **Data source**: TCMB (exchange rates), TÜFE (inflation)")
         
-        # Fetch from TCMB button
-        if st.button("🔄 Fetch from TCMB"):
-            with st.spinner("Fetching TÜFE data from TCMB..."):
-                try:
-                    tufe_rate = services['inflation_service'].fetch_tufe_from_tcmb(current_year)
-                    if tufe_rate is not None:
-                        # Save the fetched TÜFE data
-                        services['inflation_service'].save_manual_entry(
-                            month=12,  # Year-end data
-                            year=current_year,
-                            inflation_rate_percent=tufe_rate,
-                            source="TCMB Fetched"
-                        )
-                        st.success(f"✅ TÜFE data fetched from TCMB: {tufe_rate}%")
+        # Fetch from TCMB API button
+        if st.button("🔄 Fetch from TCMB API"):
+            if not is_api_configured:
+                st.error("❌ Please configure TCMB API key first")
+            elif not api_key_valid:
+                st.error("❌ Please validate your TCMB API key first")
+            else:
+                with st.spinner("Fetching TÜFE data from TCMB API..."):
+                    try:
+                        api_key = services['tufe_config_service'].get_tcmb_api_key()
+                        tufe_rate = services['inflation_service'].fetch_tufe_from_tcmb_api(current_year, api_key)
+                        if tufe_rate is not None:
+                            # Save the fetched TÜFE data
+                            services['inflation_service'].save_manual_entry(
+                                month=12,  # Year-end data
+                                year=current_year,
+                                inflation_rate_percent=tufe_rate,
+                                source="TCMB EVDS API"
+                            )
+                            st.success(f"✅ TÜFE data fetched from TCMB API: {tufe_rate}%")
+                            st.rerun()
+                        else:
+                            st.warning("⚠️ TÜFE data not found in TCMB API. Please enter manually.")
+                    except Exception as e:
+                        st.error(f"❌ Error fetching from TCMB API: {e}")
+                        st.info("Please enter TÜFE data manually.")
+    
+    # Cache Management
+    st.markdown("---")
+    st.subheader("🗄️ TÜFE Data Cache")
+    
+    # Documentation for cache management
+    with st.expander("ℹ️ About TÜFE Data Cache"):
+        st.markdown("""
+        **TÜFE Data Cache Management**
+        
+        The cache system stores TÜFE data to improve performance and reduce API calls.
+        
+        **Cache Features:**
+        - ⏰ **24-Hour Expiration**: Data is automatically refreshed after 24 hours
+        - 📊 **Source Attribution**: Each cache entry tracks its data source
+        - 🔄 **Automatic Cleanup**: Expired entries are automatically removed
+        - 📈 **Performance Optimization**: Reduces API calls and improves response times
+        - 🛡️ **Data Integrity**: Validates data before caching
+        
+        **Cache Operations:**
+        - **Refresh**: Manually refresh expired cache entries
+        - **Cleanup**: Remove expired entries to free up space
+        - **Statistics**: View cache performance and usage metrics
+        """)
+    
+    # Cache Statistics
+    try:
+        cache_stats = services['tufe_cache_service'].get_cache_stats()
+        cache_summary = services['tufe_cache_service'].get_cache_summary()
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Total Entries", cache_stats['total_entries'])
+        with col2:
+            st.metric("Valid Entries", cache_stats['valid_entries'])
+        with col3:
+            st.metric("Expired Entries", cache_stats['expired_entries'])
+        with col4:
+            validity_rate = cache_stats['validity_rate'] * 100
+            st.metric("Validity Rate", f"{validity_rate:.1f}%")
+        
+        # Cache Management Actions
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if st.button("🧹 Cleanup Expired Cache"):
+                with st.spinner("Cleaning up expired cache entries..."):
+                    try:
+                        cleaned_count = services['tufe_cache_service'].cleanup_expired_cache()
+                        st.success(f"✅ Cleaned up {cleaned_count} expired cache entries")
                         st.rerun()
-                    else:
-                        st.warning("⚠️ TÜFE data not found on TCMB website. Please enter manually.")
-                except Exception as e:
-                    st.error(f"❌ Error fetching from TCMB: {e}")
-                    st.info("Please enter TÜFE data manually.")
+                    except Exception as e:
+                        st.error(f"❌ Error cleaning cache: {e}")
+        
+        with col2:
+            if st.button("🔄 Refresh Cache Status"):
+                st.rerun()
+        
+        with col3:
+            if st.button("📊 View Cache Details"):
+                st.write("**Cached Years:**", cache_summary['cached_years'])
+                if cache_summary['year_range']['min'] and cache_summary['year_range']['max']:
+                    st.write(f"**Year Range:** {cache_summary['year_range']['min']} - {cache_summary['year_range']['max']}")
+        
+    except Exception as e:
+        st.error(f"❌ Error loading cache information: {e}")
     
     # Display inflation data
     st.markdown("---")

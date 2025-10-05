@@ -25,6 +25,7 @@ A data-driven application that:
 - **Storage**: SQLite
 - **Testing**: pytest
 - **Deployment**: Streamlit Cloud (free)
+- **TÜFE Data**: TCMB EVDS API integration with secure key management
 
 ## Quick Start
 
@@ -126,6 +127,52 @@ requirements.txt      # Python dependencies
 4. **Visualizations**: Interactive TL vs USD charts
 5. **Negotiation Summary**: Key stats for landlord discussions
 7. **Inflation Data**: Import official inflation rates
+
+## 🔐 Security & API Key Management
+
+### TCMB API Key Security
+
+This application integrates with the Turkish Central Bank (TCMB) EVDS API to fetch official TÜFE (Turkish CPI) data. The following security measures are implemented:
+
+#### 🔑 API Key Storage
+- **Environment Variables**: API keys are stored in environment variables, never in code
+- **Encryption**: API keys are encrypted at rest in the database
+- **Masking**: API keys are masked in UI displays (showing only first/last characters)
+- **No Logging**: API keys are never logged in plain text
+
+#### 🛡️ Security Features
+- **HTTPS Only**: All API calls use HTTPS encryption
+- **Rate Limiting**: Respects TCMB API rate limits with configurable delays
+- **Input Validation**: All API inputs are validated before transmission
+- **Error Handling**: Secure error handling without exposing sensitive information
+- **Data Validation**: All received data is validated before storage
+
+#### 🔒 Getting a TCMB API Key
+1. Visit [TCMB EVDS](https://evds2.tcmb.gov.tr/)
+2. Register for a free account
+3. Generate an API key from your dashboard
+4. Enter the key in the application's TÜFE configuration section
+
+#### ⚠️ Security Best Practices
+- **Never share your API key** with others
+- **Rotate your API key** regularly (every 90 days recommended)
+- **Monitor API usage** through the TCMB dashboard
+- **Use environment variables** for production deployments
+- **Keep your API key secure** - treat it like a password
+
+#### 🔄 Data Caching & Privacy
+- **24-Hour Cache**: TÜFE data is cached for 24 hours to minimize API calls
+- **Source Attribution**: All cached data includes source attribution
+- **Automatic Cleanup**: Expired cache entries are automatically removed
+- **Local Storage**: All data is stored locally in SQLite database
+- **No External Sharing**: Data is never shared with third parties
+
+#### 🚨 Security Incident Response
+If you suspect your API key has been compromised:
+1. Immediately revoke the key in your TCMB dashboard
+2. Generate a new API key
+3. Update the key in the application
+4. Monitor for any unauthorized usage
 
 ## Development
 
