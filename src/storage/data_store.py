@@ -288,6 +288,46 @@ class DataStore:
         except sqlite3.Error as e:
             raise DatabaseError(f"Failed to get rental agreements: {e}")
     
+    def delete_rental_agreement(self, agreement_id: int) -> bool:
+        """Delete a rental agreement by ID"""
+        sql = "DELETE FROM rental_agreements WHERE id = ?"
+        
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.execute(sql, (agreement_id,))
+                conn.commit()
+                return cursor.rowcount > 0
+        except sqlite3.Error as e:
+            raise DatabaseError(f"Failed to delete rental agreement: {e}")
+    
+    def update_rental_agreement(self, agreement: RentalAgreement) -> bool:
+        """Update an existing rental agreement"""
+        sql = """
+        UPDATE rental_agreements 
+        SET start_date = ?, end_date = ?, base_amount_tl = ?, 
+            conditional_rules = ?, notes = ?, updated_at = ?
+        WHERE id = ?
+        """
+        
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.execute(
+                    sql,
+                    (
+                        agreement.start_date.isoformat(),
+                        agreement.end_date.isoformat() if agreement.end_date else None,
+                        str(agreement.base_amount_tl),
+                        json.dumps(agreement.conditional_rules) if agreement.conditional_rules else None,
+                        agreement.notes,
+                        agreement.updated_at.isoformat(),
+                        agreement.id
+                    )
+                )
+                conn.commit()
+                return cursor.rowcount > 0
+        except sqlite3.Error as e:
+            raise DatabaseError(f"Failed to update rental agreement: {e}")
+    
     def _row_to_rental_agreement(self, row: sqlite3.Row) -> RentalAgreement:
         """Convert database row to RentalAgreement object"""
         return RentalAgreement(
