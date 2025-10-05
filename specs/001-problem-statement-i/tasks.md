@@ -156,9 +156,9 @@ Integration & Polish (T027-T030)
 
 ---
 
-## Phase 3.5: Services (5 tasks) [SEQUENTIAL - each depends on T016]
+## Phase 3.5: Services (5 tasks) [SEQUENTIAL - each depends on T016] ✅ COMPLETE
 
-- [ ] **T017** - Implement ExchangeRateService
+- [x] **T017** - Implement ExchangeRateService
   - Implement all methods from contracts/service-interfaces.md
   - TCMB API integration (XML parsing with lxml)
   - Fallback to exchangerate-api.io
@@ -167,14 +167,14 @@ Integration & Polish (T027-T030)
   - File: `/Users/rustemagziamov/kira-prolongation-support/src/services/exchange_rate_service.py`
   - **Dependencies**: T016 (needs DataStore)
 
-- [ ] **T018** - Implement InflationService
+- [x] **T018** - Implement InflationService
   - Implement all methods from contracts/service-interfaces.md
   - CSV parsing with pandas
   - Legal maximum increase calculation
   - File: `/Users/rustemagziamov/kira-prolongation-support/src/services/inflation_service.py`
   - **Dependencies**: T016 (needs DataStore)
 
-- [ ] **T019** - Implement ScreenshotParserService
+- [x] **T019** - Implement ScreenshotParserService
   - Implement all methods from contracts/service-interfaces.md
   - Pytesseract integration
   - Image preprocessing (grayscale, contrast, denoise)
@@ -184,7 +184,7 @@ Integration & Polish (T027-T030)
   - File: `/Users/rustemagziamov/kira-prolongation-support/src/services/screenshot_parser.py`
   - **Dependencies**: T016 (needs DataStore)
 
-- [ ] **T020** - Implement CalculationService
+- [x] **T020** - Implement CalculationService
   - Implement all methods from contracts/service-interfaces.md
   - USD conversion logic
   - Conditional pricing rule evaluation
@@ -193,7 +193,7 @@ Integration & Polish (T027-T030)
   - File: `/Users/rustemagziamov/kira-prolongation-support/src/services/calculation_service.py`
   - **Dependencies**: T016 (needs DataStore)
 
-- [ ] **T021** - Implement ExportService
+- [x] **T021** - Implement ExportService
   - Implement all methods from contracts/service-interfaces.md
   - Plotly figure to PNG export (using Kaleido)
   - WhatsApp-optimized image generation (< 2MB)
