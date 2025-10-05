@@ -47,7 +47,20 @@
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+### Simple and Direct Check
+- [ ] Solution is straightforward and easy to understand
+- [ ] No unnecessary abstractions or patterns added
+- [ ] Code structure is as simple as possible for the requirements
+
+### Test What Matters Check
+- [ ] Test strategy focuses on critical paths and hard-to-verify behavior
+- [ ] Not over-testing simple or obvious functionality
+- [ ] Tests provide real confidence, not just coverage
+
+### Done Over Perfect Check
+- [ ] Feature scope is focused on working functionality
+- [ ] Not gold-plating or over-engineering
+- [ ] Plan enables shipping something useful quickly
 
 ## Project Structure
 
@@ -216,4 +229,4 @@ directories captured above]
 - [ ] Complexity deviations documented
 
 ---
-*Based on Constitution v2.1.1 - See `/memory/constitution.md`*
+*Based on Constitution v1.0.0 - See `.specify/memory/constitution.md`*
