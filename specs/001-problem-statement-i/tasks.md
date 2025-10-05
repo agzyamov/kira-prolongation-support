@@ -114,30 +114,30 @@ Integration & Polish (T027-T030)
 
 ---
 
-## Phase 3.3: Core Models (5 tasks) [PARALLEL]
+## Phase 3.3: Core Models (5 tasks) [PARALLEL] ✅ COMPLETE
 
-- [ ] **T011** [P] - Create RentalAgreement model
+- [x] **T011** [P] - Create RentalAgreement model
   - Implement dataclass from data-model.md
   - Add validation: start_date < end_date, base_amount_tl > 0
   - Handle conditional_rules JSON parsing
   - File: `/Users/rustemagziamov/kira-prolongation-support/src/models/rental_agreement.py`
 
-- [ ] **T012** [P] - Create ExchangeRate model
+- [x] **T012** [P] - Create ExchangeRate model
   - Implement dataclass from data-model.md
   - Add validation: month 1-12, year reasonable, rate > 0
   - File: `/Users/rustemagziamov/kira-prolongation-support/src/models/exchange_rate.py`
 
-- [ ] **T013** [P] - Create PaymentRecord model
+- [x] **T013** [P] - Create PaymentRecord model
   - Implement dataclass from data-model.md
   - Add validation: amounts > 0, valid date
   - File: `/Users/rustemagziamov/kira-prolongation-support/src/models/payment_record.py`
 
-- [ ] **T014** [P] - Create MarketRate model
+- [x] **T014** [P] - Create MarketRate model
   - Implement dataclass from data-model.md
   - Add validation: amount_tl > 0, confidence 0-1
   - File: `/Users/rustemagziamov/kira-prolongation-support/src/models/market_rate.py`
 
-- [ ] **T015** [P] - Create InflationData model
+- [x] **T015** [P] - Create InflationData model
   - Implement dataclass from data-model.md
   - Add validation: month 1-12, year valid
   - File: `/Users/rustemagziamov/kira-prolongation-support/src/models/inflation_data.py`
