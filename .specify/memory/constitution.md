@@ -1,15 +1,18 @@
 <!--
 Sync Impact Report:
-Version change: [TEMPLATE] → v1.0.0
+Version change: v1.0.0 → v1.1.0
 Changes:
-  - Initial constitution created for solo personal project
-  - Principles: 3 minimal principles focused on simplicity
-  - Added sections: None (kept minimal)
-  - Removed sections: Removed optional sections to keep it simple
+  - Added Principle IV: Use Context7 for Library Research
+  - Principle guidance for planning and implementation phases
+  - No existing principles modified
+Added sections:
+  - New Principle IV
+Removed sections:
+  - None
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md - constitution check will be minimal
-  ✅ .specify/templates/spec-template.md - no changes needed (already flexible)
-  ✅ .specify/templates/tasks-template.md - testing approach will be pragmatic
+  ✅ .specify/templates/plan-template.md - no changes needed (principle is tool usage guidance)
+  ✅ .specify/templates/spec-template.md - no changes needed
+  ✅ .specify/templates/tasks-template.md - no changes needed (AI will follow during task creation)
 Follow-up TODOs: None
 -->
 
@@ -26,6 +29,9 @@ Only write tests for things that will actually break or are hard to verify by ru
 ### III. Done Over Perfect
 Working code beats perfect code. Ship features when they work, not when they're polished. You can always improve it later if needed.
 
+### IV. Use Context7 for Library Research
+When planning implementation or creating tasks, use the Context7 MCP server to get up-to-date documentation for libraries and frameworks. This ensures you're using current best practices and APIs instead of outdated information.
+
 ## Governance
 
 This is a personal project. These principles are guidelines, not laws. Change them whenever they stop being helpful.
@@ -35,4 +41,4 @@ This is a personal project. These principles are guidelines, not laws. Change th
 - A principle becomes annoying instead of helpful
 - You learn something that changes your approach
 
-**Version**: 1.0.0 | **Ratified**: 2025-10-05 | **Last Amended**: 2025-10-05
+**Version**: 1.1.0 | **Ratified**: 2025-10-05 | **Last Amended**: 2025-10-05
