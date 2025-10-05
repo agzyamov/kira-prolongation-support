@@ -98,6 +98,7 @@ class ScreenshotParserService:
         - 35.000 TL
         - 35,000 TL
         - 35000 TL
+        - 30 bin (30 thousand in Turkish)
         
         Args:
             text: OCR text output
@@ -106,28 +107,40 @@ class ScreenshotParserService:
             Price as Decimal, or None if no price found
         """
         # Pattern for Turkish rental prices
-        # Matches: 35.000 TL, 35,000 TL, 35000 TL, etc.
         patterns = [
-            r'(?:Kira|kira|KIRA)?\s*:?\s*(\d{1,3}[.,]?\d{3})\s*(?:TL|tl)',  # With thousands separator
-            r'(?:Kira|kira|KIRA)?\s*:?\s*(\d{4,6})\s*(?:TL|tl)',  # Without separator
+            # Turkish "bin" format (e.g., "30 bin" = 30,000)
+            r'(\d{1,3})\s*(?:bin|BIN|Bin)',
+            # With thousands separator
+            r'(?:Kira|kira|KIRA)?\s*:?\s*(\d{1,3}[.,]?\d{3})\s*(?:TL|tl)',
+            # Without separator
+            r'(?:Kira|kira|KIRA)?\s*:?\s*(\d{4,6})\s*(?:TL|tl)',
         ]
         
-        for pattern in patterns:
+        for i, pattern in enumerate(patterns):
             match = re.search(pattern, text)
             if match:
                 price_str = match.group(1)
-                # Remove thousand separators (. and ,)
-                price_str = price_str.replace('.', '').replace(',', '')
-                try:
-                    return Decimal(price_str)
-                except:
-                    continue
+                
+                if i == 0:  # "bin" format - multiply by 1000
+                    try:
+                        return Decimal(price_str) * 1000
+                    except:
+                        continue
+                else:  # Regular TL format
+                    # Remove thousand separators (. and ,)
+                    price_str = price_str.replace('.', '').replace(',', '')
+                    try:
+                        return Decimal(price_str)
+                    except:
+                        continue
         
         return None
     
     def extract_all_prices_from_text(self, text: str) -> List[Decimal]:
         """
         Extract all rental prices from OCR text.
+        
+        Handles Turkish "bin" format and standard TL formats.
         
         Args:
             text: OCR text output
@@ -139,17 +152,23 @@ class ScreenshotParserService:
         
         # Find all price matches
         patterns = [
-            r'(\d{1,3}[.,]\d{3})\s*(?:TL|tl)',  # With thousands separator
-            r'(\d{5,6})\s*(?:TL|tl)',  # Without separator (5-6 digits)
+            (r'(\d{1,3})\s*(?:bin|BIN|Bin)', True),  # Turkish "bin" format (multiply by 1000)
+            (r'(\d{1,3}[.,]\d{3})\s*(?:TL|tl)', False),  # With thousands separator
+            (r'(\d{5,6})\s*(?:TL|tl)', False),  # Without separator (5-6 digits)
         ]
         
-        for pattern in patterns:
+        for pattern, is_bin_format in patterns:
             matches = re.findall(pattern, text)
             for match in matches:
-                # Remove thousand separators
-                price_str = match.replace('.', '').replace(',', '')
                 try:
-                    price = Decimal(price_str)
+                    if is_bin_format:
+                        # "bin" format: multiply by 1000
+                        price = Decimal(match) * 1000
+                    else:
+                        # Regular TL format: remove thousand separators
+                        price_str = match.replace('.', '').replace(',', '')
+                        price = Decimal(price_str)
+                    
                     # Filter reasonable rental prices (5,000 - 500,000 TL)
                     if Decimal("5000") <= price <= Decimal("500000"):
                         if price not in prices:  # Avoid duplicates
@@ -162,7 +181,7 @@ class ScreenshotParserService:
     def extract_location(self, text: str) -> Optional[str]:
         """
         Extract location/district from OCR text.
-        Common Istanbul districts: Kadıköy, Beşiktaş, Şişli, etc.
+        Handles common Turkish districts and neighborhoods.
         
         Args:
             text: OCR text output
@@ -170,8 +189,9 @@ class ScreenshotParserService:
         Returns:
             Location string if found, None otherwise
         """
-        # Common Istanbul districts
+        # Common Turkish districts and neighborhoods
         districts = [
+            # Istanbul
             'Kadıköy', 'Kadiköy', 'KADIKÖY',
             'Beşiktaş', 'Besiktas', 'BEŞİKTAŞ',
             'Şişli', 'Sisli', 'ŞİŞLİ',
@@ -181,7 +201,16 @@ class ScreenshotParserService:
             'Üsküdar', 'Uskudar', 'ÜSKÜDAR',
             'Fatih', 'FATİH',
             'Bakırköy', 'Bakirkoy', 'BAKIRKÖY',
-            'Beyoğlu', 'Beyoglu', 'BEYOĞLU'
+            'Beyoğlu', 'Beyoglu', 'BEYOĞLU',
+            # Antalya
+            'Konyaaltı', 'Konyaalti', 'KONYAALTI',
+            'Muratpaşa', 'Muratpasa', 'MURATPAŞA',
+            'Kepez', 'KEPEZ',
+            'Pınarbaşı', 'Pinarbasi', 'PINARBAŞI',
+            # Other major cities
+            'Çankaya', 'Cankaya', 'ÇANKAYA',
+            'Konak', 'KONAK',
+            'Karşıyaka', 'Karsiyaka', 'KARŞIYAKA'
         ]
         
         for district in districts:
