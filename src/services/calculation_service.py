@@ -3,7 +3,7 @@ Calculation service for rent and exchange rate calculations.
 """
 from decimal import Decimal
 from typing import Dict, List, Optional
-from datetime import date
+from datetime import date, datetime
 
 from src.models import RentalAgreement, ExchangeRate, PaymentRecord
 from src.services.exceptions import CalculationError
@@ -169,4 +169,75 @@ class CalculationService:
             "min_usd": min(p.amount_usd for p in payments),
             "max_usd": max(p.amount_usd for p in payments)
         }
+    
+    def get_legal_rule_for_date(self, check_date: datetime) -> str:
+        """
+        Determine applicable legal rule for given date.
+        
+        Args:
+            check_date: Date to check legal rule for
+            
+        Returns:
+            "25%_cap" for dates up to June 30, 2024
+            "cpi_based" for dates after July 1, 2024
+        """
+        if not isinstance(check_date, (date, datetime)):
+            raise ValueError("check_date must be a date or datetime object")
+        
+        # Convert datetime to date if needed
+        if isinstance(check_date, datetime):
+            check_date = check_date.date()
+        
+        # July 1, 2024 is the cutoff date
+        cutoff_date = date(2024, 7, 1)
+        
+        if check_date < cutoff_date:
+            return "25%_cap"
+        else:
+            return "cpi_based"
+    
+    def get_legal_rule_label(self, check_date: datetime) -> str:
+        """
+        Get human-readable label for legal rule applicable to given date.
+        
+        Args:
+            check_date: Date to get label for
+            
+        Returns:
+            "+25% (limit until July 2024)" or "+CPI (Yearly TÜFE)"
+        """
+        rule_type = self.get_legal_rule_for_date(check_date)
+        
+        if rule_type == "25%_cap":
+            return "+25% (limit until July 2024)"
+        else:
+            return "+CPI (Yearly TÜFE)"
+    
+    def calculate_legal_max_increase(self, agreement: RentalAgreement, check_date: datetime) -> Decimal:
+        """
+        Calculate legal maximum rent increase for given date.
+        
+        Args:
+            agreement: Rental agreement to calculate for
+            check_date: Date to calculate for
+            
+        Returns:
+            Legal maximum increase amount in TL
+        """
+        if not isinstance(check_date, (date, datetime)):
+            raise ValueError("check_date must be a date or datetime object")
+        
+        # Convert datetime to date if needed
+        if isinstance(check_date, datetime):
+            check_date = check_date.date()
+        
+        rule_type = self.get_legal_rule_for_date(check_date)
+        
+        if rule_type == "25%_cap":
+            # 25% cap rule
+            return agreement.base_amount_tl * Decimal("0.25")
+        else:
+            # CPI-based rule - for now, return a placeholder
+            # In a real implementation, this would fetch TÜFE data
+            return agreement.base_amount_tl * Decimal("0.10")  # Placeholder 10%
 

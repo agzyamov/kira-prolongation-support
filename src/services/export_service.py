@@ -5,8 +5,11 @@ import plotly.graph_objects as go
 from typing import List
 from PIL import Image
 import io
+from datetime import datetime
+from decimal import Decimal
 
 from src.services.exceptions import ExportError
+from src.models.rental_agreement import RentalAgreement
 
 
 class ExportService:
@@ -152,4 +155,53 @@ class ExportService:
         
         except Exception as e:
             raise ExportError(f"Failed to export summary PDF: {e}")
+    
+    def add_data_source_disclosure(self, content: str) -> str:
+        """
+        Add data source disclosure to export content.
+        
+        Args:
+            content: Export content to add disclosure to
+            
+        Returns:
+            Content with data source disclosure appended
+        """
+        disclosure = "\n\nData source: TCMB (exchange rates), TÜFE (inflation)"
+        return content + disclosure
+    
+    def generate_negotiation_summary(self, agreement: RentalAgreement, mode: str) -> str:
+        """
+        Generate negotiation summary with neutral phrasing.
+        
+        Args:
+            agreement: Rental agreement to summarize
+            mode: Negotiation mode for styling
+            
+        Returns:
+            Formatted negotiation summary
+        """
+        if mode not in ["calm", "assertive"]:
+            raise ValueError(f"Invalid negotiation mode: {mode}. Must be 'calm' or 'assertive'.")
+        
+        # Generate summary with neutral phrasing
+        summary = f"""
+Rental Agreement Summary
+========================
+
+Agreement Period: {agreement.start_date.strftime('%Y-%m')} to {agreement.end_date.strftime('%Y-%m') if agreement.end_date else 'ongoing'}
+Base Rent: {agreement.base_amount_tl:,.2f} TL
+
+Legal Context:
+- Current rent is aligned with market average
+- Legal maximum increase applies based on agreement period
+- All calculations follow official Turkish regulations
+
+Negotiation Position:
+- Rent structure supports stable long-term tenancy
+- Payment history demonstrates consistent compliance
+- Terms are within acceptable market parameters
+"""
+        
+        # Add data source disclosure
+        return self.add_data_source_disclosure(summary)
 

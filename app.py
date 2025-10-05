@@ -14,7 +14,9 @@ from src.services import (
     ExchangeRateService,
     InflationService,
     CalculationService,
-    ExportService
+    ExportService,
+    NegotiationSettingsService,
+    LegalRuleService
 )
 from src.models import RentalAgreement
 from src.utils import ChartGenerator
@@ -38,7 +40,9 @@ def init_services():
         'inflation_service': InflationService(data_store),
         'calculation_service': CalculationService(),
         'export_service': ExportService(),
-        'chart_generator': ChartGenerator()
+        'chart_generator': ChartGenerator(),
+        'negotiation_settings_service': NegotiationSettingsService(),
+        'legal_rule_service': LegalRuleService(data_store)
     }
 
 services = init_services()
@@ -58,6 +62,25 @@ page = st.sidebar.radio(
         "📊 Inflation Data"
     ]
 )
+
+st.sidebar.markdown("---")
+
+# Negotiation Mode Selector
+# NEW FEATURE: User-selectable negotiation mode (Calm/Assertive)
+# - Calm mode: Hides growth arrows, tones down visuals
+# - Assertive mode: Highlights changes, bold numbers
+st.sidebar.subheader("🎯 Negotiation Mode")
+current_mode = services['negotiation_settings_service'].get_current_mode()
+new_mode = st.sidebar.radio(
+    "Select mode:",
+    ["calm", "assertive"],
+    index=0 if current_mode == "calm" else 1,
+    format_func=lambda x: "😌 Calm" if x == "calm" else "💪 Assertive"
+)
+
+if new_mode != current_mode:
+    services['negotiation_settings_service'].set_mode(new_mode)
+    st.sidebar.success(f"Mode changed to: {'😌 Calm' if new_mode == 'calm' else '💪 Assertive'}")
 
 st.sidebar.markdown("---")
 st.sidebar.info("💡 **Tip**: Start by adding your rental agreements, then fetch exchange rates.")
@@ -315,6 +338,14 @@ elif page == "📈 Visualizations":
         # TL vs USD chart
         st.subheader("💱 TL vs USD Equivalent Over Time")
         fig1 = services['chart_generator'].create_tl_vs_usd_chart(payments)
+        
+        # Add agreement period annotations
+        # NEW FEATURE: Agreement Period Annotations
+        # - Adds vertical markers labeled "New Agreement (YYYY)" to show contract boundaries
+        agreements = services['data_store'].get_rental_agreements()
+        if agreements:
+            fig1 = services['chart_generator'].add_agreement_markers(fig1, agreements)
+        
         st.plotly_chart(fig1, use_container_width=True)
         
         # Payment comparison
@@ -380,6 +411,34 @@ elif page == "🤝 Negotiation Summary":
                 f"${latest_payment.amount_usd:,.2f}"
             )
         
+        # Legal Rule Display
+        # NEW FEATURE: Legal CPI/Cap Context
+        # - Automatically determines legal rule based on date
+        # - Shows +25% cap for periods up to June 30, 2024
+        # - Shows +CPI (Yearly TÜFE) for periods after July 1, 2024
+        st.subheader("⚖️ Legal Context")
+        
+        # Get current date for legal rule determination
+        current_date = datetime.now()
+        
+        # Get legal rule for current date
+        legal_rule_type = services['calculation_service'].get_legal_rule_for_date(current_date)
+        legal_rule_label = services['calculation_service'].get_legal_rule_label(current_date)
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.info(f"**Legal Max Increase**: {legal_rule_label}")
+        
+        with col2:
+            # Calculate legal max increase for latest agreement
+            if agreements:
+                latest_agreement = agreements[-1]
+                legal_max_increase = services['calculation_service'].calculate_legal_max_increase(
+                    latest_agreement, current_date
+                )
+                st.info(f"**Max Increase Amount**: {legal_max_increase:,.2f} TL")
+        
         # Export section
         st.markdown("---")
         st.subheader("💾 Export")
@@ -409,6 +468,26 @@ elif page == "🤝 Negotiation Summary":
         
         with col2:
             st.info("💡 **Tip**: Share the exported image via WhatsApp with your landlord!")
+        
+        # Data Source Disclosure
+        # NEW FEATURE: Data Source Disclosure
+        # - Every exported summary includes "Data source: TCMB (exchange rates), TÜFE (inflation)"
+        # - Uses neutral negotiation phrasing ("Aligned with market average")
+        st.markdown("---")
+        st.subheader("📋 Data Source Disclosure")
+        
+        # Generate negotiation summary with data source disclosure
+        if agreements:
+            latest_agreement = agreements[-1]
+            current_mode = services['negotiation_settings_service'].get_current_mode()
+            summary = services['export_service'].generate_negotiation_summary(latest_agreement, current_mode)
+            
+            st.text_area(
+                "Negotiation Summary (with data source disclosure):",
+                value=summary,
+                height=200,
+                disabled=True
+            )
 
 elif page == "📊 Inflation Data":
     st.title("📊 Turkish Inflation Data")
@@ -462,6 +541,57 @@ elif page == "📊 Inflation Data":
                 st.success("✅ Inflation data saved!")
             except Exception as e:
                 st.error(f"❌ Error: {e}")
+    
+    # TÜFE Data Handling
+    # NEW FEATURE: TÜFE Data Handling
+    # - Handles TÜFE data unavailability with fallback to manual entry
+    # - Shows "TÜFE data pending" when official data is unavailable
+    # - Allows manual entry of official CPI rate for legal calculations
+    st.markdown("---")
+    st.subheader("📈 TÜFE Data Management")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.write("**TÜFE Data Status**")
+        current_year = datetime.now().year
+        
+        # Check TÜFE availability
+        is_available = services['inflation_service'].is_tufe_available(current_year)
+        if is_available:
+            tufe_rate = services['inflation_service'].get_yearly_tufe(current_year)
+            st.success(f"✅ TÜFE data available for {current_year}: {tufe_rate}%")
+        else:
+            st.warning(f"⚠️ TÜFE data pending for {current_year}")
+            
+            # Manual TÜFE entry option
+            if st.button("📝 Enter TÜFE Manually"):
+                tufe_input = st.number_input(
+                    f"Enter TÜFE rate for {current_year} (%)",
+                    min_value=0.0,
+                    value=50.0,
+                    step=0.1
+                )
+                if st.button("💾 Save TÜFE"):
+                    try:
+                        services['inflation_service'].save_manual_entry(
+                            month=12,  # Year-end data
+                            year=current_year,
+                            inflation_rate_percent=Decimal(str(tufe_input)),
+                            source="TÜFE Manual Entry"
+                        )
+                        st.success("✅ TÜFE data saved!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Error: {e}")
+    
+    with col2:
+        st.write("**TÜFE Data Source**")
+        st.info("📊 **Data source**: TCMB (exchange rates), TÜFE (inflation)")
+        
+        # Fetch from TCMB button (placeholder)
+        if st.button("🔄 Fetch from TCMB"):
+            st.info("🔄 TÜFE data fetching from TCMB is not yet implemented. Please enter manually.")
     
     # Display inflation data
     st.markdown("---")

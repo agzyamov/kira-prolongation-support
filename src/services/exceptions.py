@@ -27,3 +27,18 @@ class CSVParseError(ServiceError):
     """Raised when CSV parsing fails"""
     pass
 
+
+class NegotiationModeError(ServiceError):
+    """Raised when invalid negotiation mode is provided"""
+    pass
+
+
+class LegalRuleError(ServiceError):
+    """Raised when legal rule cannot be determined"""
+    pass
+
+
+class TufeDataError(ServiceError):
+    """Raised when TÜFE data is unavailable or invalid"""
+    pass
+

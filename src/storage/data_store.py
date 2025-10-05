@@ -15,6 +15,8 @@ from src.models import (
     PaymentRecord,
     InflationData
 )
+from src.models.negotiation_settings import NegotiationSettings
+from src.models.legal_rule import LegalRule
 
 
 class DatabaseError(Exception):
@@ -369,5 +371,112 @@ class DataStore:
             source=row['source'],
             notes=row['notes'],
             created_at=datetime.fromisoformat(row['created_at'])
+        )
+    
+    # NegotiationSettings methods
+    def save_negotiation_settings(self, settings: NegotiationSettings) -> int:
+        """
+        Save negotiation settings to database.
+        
+        Args:
+            settings: NegotiationSettings object to save
+            
+        Returns:
+            ID of saved record
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT OR REPLACE INTO negotiation_settings (mode, created_at, updated_at)
+                VALUES (?, ?, ?)
+            """, (
+                settings.mode,
+                settings.created_at.isoformat(),
+                settings.updated_at.isoformat()
+            ))
+            conn.commit()
+            return cursor.lastrowid
+    
+    def get_negotiation_settings(self) -> Optional[NegotiationSettings]:
+        """
+        Get current negotiation settings from database.
+        
+        Returns:
+            NegotiationSettings object or None if not found
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM negotiation_settings 
+                ORDER BY updated_at DESC 
+                LIMIT 1
+            """)
+            row = cursor.fetchone()
+            
+            if row:
+                return self._row_to_negotiation_settings(row)
+            return None
+    
+    def _row_to_negotiation_settings(self, row) -> NegotiationSettings:
+        """Convert database row to NegotiationSettings object."""
+        return NegotiationSettings(
+            mode=row['mode'],
+            created_at=datetime.fromisoformat(row['created_at']),
+            updated_at=datetime.fromisoformat(row['updated_at'])
+        )
+    
+    # LegalRule methods
+    def save_legal_rule(self, rule: LegalRule) -> int:
+        """
+        Save legal rule to database.
+        
+        Args:
+            rule: LegalRule object to save
+            
+        Returns:
+            ID of saved record
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT OR REPLACE INTO legal_rules 
+                (rule_type, effective_start, effective_end, rate, label, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (
+                rule.rule_type,
+                rule.effective_start.isoformat(),
+                rule.effective_end.isoformat() if rule.effective_end else None,
+                float(rule.rate) if rule.rate else None,
+                rule.label,
+                datetime.now().isoformat()
+            ))
+            conn.commit()
+            return cursor.lastrowid
+    
+    def get_legal_rules(self) -> List[LegalRule]:
+        """
+        Get all legal rules from database.
+        
+        Returns:
+            List of LegalRule objects
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM legal_rules 
+                ORDER BY effective_start
+            """)
+            rows = cursor.fetchall()
+            
+            return [self._row_to_legal_rule(row) for row in rows]
+    
+    def _row_to_legal_rule(self, row) -> LegalRule:
+        """Convert database row to LegalRule object."""
+        return LegalRule(
+            rule_type=row['rule_type'],
+            effective_start=date.fromisoformat(row['effective_start']),
+            effective_end=date.fromisoformat(row['effective_end']) if row['effective_end'] else None,
+            rate=Decimal(str(row['rate'])) if row['rate'] else None,
+            label=row['label']
         )
 

@@ -52,6 +52,45 @@ class RentalAgreement:
         """Check if this agreement has conditional pricing rules"""
         return self.conditional_rules is not None and len(self.conditional_rules) > 0
     
+    def get_legal_rule_for_date(self, check_date: date) -> str:
+        """
+        Get applicable legal rule for given date.
+        
+        Args:
+            check_date: Date to check legal rule for
+            
+        Returns:
+            "25%_cap" for dates up to June 30, 2024
+            "cpi_based" for dates after July 1, 2024
+        """
+        if not isinstance(check_date, date):
+            raise ValueError("check_date must be a date object")
+        
+        # July 1, 2024 is the cutoff date
+        cutoff_date = date(2024, 7, 1)
+        
+        if check_date < cutoff_date:
+            return "25%_cap"
+        else:
+            return "cpi_based"
+    
+    def get_legal_rule_label(self, check_date: date) -> str:
+        """
+        Get human-readable label for legal rule applicable to given date.
+        
+        Args:
+            check_date: Date to get label for
+            
+        Returns:
+            "+25% (limit until July 2024)" or "+CPI (Yearly TÜFE)"
+        """
+        rule_type = self.get_legal_rule_for_date(check_date)
+        
+        if rule_type == "25%_cap":
+            return "+25% (limit until July 2024)"
+        else:
+            return "+CPI (Yearly TÜFE)"
+    
     def __repr__(self) -> str:
         end_str = self.end_date.strftime("%Y-%m") if self.end_date else "ongoing"
         return (

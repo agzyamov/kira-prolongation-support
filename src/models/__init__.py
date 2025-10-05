@@ -6,11 +6,15 @@ from .rental_agreement import RentalAgreement
 from .exchange_rate import ExchangeRate
 from .payment_record import PaymentRecord
 from .inflation_data import InflationData
+from .negotiation_settings import NegotiationSettings
+from .legal_rule import LegalRule
 
 __all__ = [
     "RentalAgreement",
     "ExchangeRate",
     "PaymentRecord",
     "InflationData",
+    "NegotiationSettings",
+    "LegalRule",
 ]
 

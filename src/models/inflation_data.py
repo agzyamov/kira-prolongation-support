@@ -64,6 +64,46 @@ class InflationData:
         """
         return Decimal("1") + (self.inflation_rate_percent / Decimal("100"))
     
+    def get_yearly_tufe(self, year: int) -> Optional[Decimal]:
+        """
+        Get yearly TÜFE rate for given year.
+        
+        Args:
+            year: Year to get TÜFE for
+            
+        Returns:
+            TÜFE rate as Decimal or None if not available
+        """
+        if not isinstance(year, int):
+            raise ValueError("year must be an integer")
+        
+        if year < 2000 or year > 2100:
+            raise ValueError("year must be between 2000-2100")
+        
+        # For now, return None as this would typically query a database
+        # In a real implementation, this would search for TÜFE data for the given year
+        return None
+    
+    def is_tufe_available(self, year: int) -> bool:
+        """
+        Check if TÜFE data is available for given year.
+        
+        Args:
+            year: Year to check
+            
+        Returns:
+            True if TÜFE data is available
+        """
+        if not isinstance(year, int):
+            raise ValueError("year must be an integer")
+        
+        if year < 2000 or year > 2100:
+            return False
+        
+        # For now, return False as this would typically query a database
+        # In a real implementation, this would check if TÜFE data exists for the given year
+        return False
+    
     def __repr__(self) -> str:
         return (
             f"InflationData({self.year}-{self.month:02d}, "

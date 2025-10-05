@@ -6,8 +6,9 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from typing import List, Dict
 from decimal import Decimal
+from datetime import datetime
 
-from src.models import PaymentRecord
+from src.models import PaymentRecord, RentalAgreement
 
 
 class ChartGenerator:
@@ -210,6 +211,89 @@ class ChartGenerator:
             height=500,
             template="plotly_white"
         )
+        
+        return fig
+    
+    def create_negotiation_mode_chart(self, data: Dict, mode: str) -> go.Figure:
+        """
+        Create chart with negotiation mode styling.
+        
+        Args:
+            data: Chart data
+            mode: "calm" or "assertive"
+            
+        Returns:
+            Plotly Figure with appropriate styling
+        """
+        if mode not in ["calm", "assertive"]:
+            raise ValueError(f"Invalid negotiation mode: {mode}. Must be 'calm' or 'assertive'.")
+        
+        # Create base chart
+        fig = self.create_negotiation_summary_chart(data)
+        
+        # Apply mode-specific styling
+        return self.apply_negotiation_mode_styling(fig, mode)
+    
+    def add_agreement_markers(self, fig: go.Figure, agreements: List[RentalAgreement]) -> go.Figure:
+        """
+        Add vertical markers for agreement periods.
+        
+        Args:
+            fig: Existing Plotly Figure
+            agreements: List of rental agreements
+            
+        Returns:
+            Updated Figure with agreement markers
+        """
+        if not agreements:
+            return fig
+        
+        # Add vertical markers for each agreement
+        for agreement in agreements:
+            # Convert start date to string for x-axis
+            start_date_str = agreement.start_date.strftime("%Y-%m")
+            
+            # Add vertical line
+            fig.add_vline(
+                x=start_date_str,
+                line_dash="dash",
+                line_color="gray",
+                opacity=0.7,
+                annotation_text=f"New Agreement ({agreement.start_date.year})",
+                annotation_position="top"
+            )
+        
+        return fig
+    
+    def apply_negotiation_mode_styling(self, fig: go.Figure, mode: str) -> go.Figure:
+        """
+        Apply negotiation mode styling to chart.
+        
+        Args:
+            fig: Plotly Figure to style
+            mode: "calm" or "assertive"
+            
+        Returns:
+            Styled Figure
+        """
+        if mode not in ["calm", "assertive"]:
+            raise ValueError(f"Invalid negotiation mode: {mode}. Must be 'calm' or 'assertive'.")
+        
+        if mode == "calm":
+            # Calm mode: subdued colors, no growth arrows
+            fig.update_layout(
+                colorway=["#95A5A6", "#7F8C8D", "#BDC3C7"],  # Muted colors
+                title_font_color="#2C3E50",
+                font_color="#34495E"
+            )
+        else:
+            # Assertive mode: bold colors, emphasis
+            fig.update_layout(
+                colorway=["#E74C3C", "#27AE60", "#F39C12"],  # Bold colors
+                title_font_color="#C0392B",
+                font_color="#2C3E50",
+                title_font_size=20  # Larger title
+            )
         
         return fig
 

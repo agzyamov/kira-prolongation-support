@@ -190,4 +190,82 @@ class InflationService:
         validate_year(end_year)
         
         return self.data_store.get_inflation_data_range(start_year, end_year)
+    
+    def get_yearly_tufe(self, year: int) -> Optional[Decimal]:
+        """
+        Get yearly TÜFE rate for given year.
+        
+        Args:
+            year: Year to get TÜFE for
+            
+        Returns:
+            TÜFE rate as Decimal or None if not available
+        """
+        if not isinstance(year, int):
+            raise ValueError("year must be an integer")
+        
+        if year < 2000 or year > 2100:
+            raise ValueError("year must be between 2000-2100")
+        
+        try:
+            # Try to get from database first
+            inflation_data = self.data_store.get_inflation_data_range(year, year)
+            if inflation_data:
+                # Return the latest month's data for the year
+                latest_data = max(inflation_data, key=lambda x: x.month)
+                return latest_data.inflation_rate_percent
+        except Exception:
+            # If database fails, return None
+            pass
+        
+        return None
+    
+    def is_tufe_available(self, year: int) -> bool:
+        """
+        Check if TÜFE data is available for given year.
+        
+        Args:
+            year: Year to check
+            
+        Returns:
+            True if TÜFE data is available
+        """
+        if not isinstance(year, int):
+            raise ValueError("year must be an integer")
+        
+        if year < 2000 or year > 2100:
+            return False
+        
+        try:
+            # Check if data exists in database
+            inflation_data = self.data_store.get_inflation_data_range(year, year)
+            return len(inflation_data) > 0
+        except Exception:
+            # If database fails, return False
+            return False
+    
+    def fetch_tufe_from_tcmb(self, year: int) -> Optional[Decimal]:
+        """
+        Fetch TÜFE data from TCMB API.
+        
+        Args:
+            year: Year to fetch TÜFE for
+            
+        Returns:
+            TÜFE rate as Decimal or None if not available
+        """
+        if not isinstance(year, int):
+            raise ValueError("year must be an integer")
+        
+        if year < 2000 or year > 2100:
+            return None
+        
+        try:
+            # For now, return None as this would require TCMB API integration
+            # In a real implementation, this would make an API call to TCMB
+            # to fetch the official TÜFE data for the given year
+            return None
+        except Exception:
+            # If API call fails, return None
+            return None
 
