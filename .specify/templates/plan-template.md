@@ -55,7 +55,12 @@
 ### Test What Matters Check
 - [ ] Test strategy focuses on critical paths and hard-to-verify behavior
 - [ ] Not over-testing simple or obvious functionality
-- [ ] Tests provide real confidence, not just coverage
+
+### Latest Stable Dependencies Check
+- [ ] All dependencies pinned to specific versions (no ranges)
+- [ ] Using latest stable releases as of September 2025
+- [ ] Streamlit 1.50.0 specified for web framework
+- [ ] Dependencies updated for security patches and bug fixes
 
 ### Done Over Perfect Check
 - [ ] Feature scope is focused on working functionality
@@ -229,4 +234,4 @@ directories captured above]
 - [ ] Complexity deviations documented
 
 ---
-*Based on Constitution v1.0.0 - See `.specify/memory/constitution.md`*
+*Based on Constitution v1.4.1 - See `.specify/memory/constitution.md`*
