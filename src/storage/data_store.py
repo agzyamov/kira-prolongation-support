@@ -52,6 +52,7 @@ class DataStore:
             # For existing databases, run migrations
             with self._get_connection() as conn:
                 self._migrate_market_rates_table(conn)
+                self._cleanup_deprecated_exchange_rates(conn)
     
     def _create_schema(self):
         """Create database schema with all tables and indexes"""
@@ -199,6 +200,38 @@ class DataStore:
             # If migration fails, log but don't crash
             print(f"Warning: Market rates table migration failed: {e}")
     
+    def _cleanup_deprecated_exchange_rates(self, conn):
+        """Remove exchange rates from non-TCMB sources (Constitution Principle V)"""
+        try:
+            # Check if exchange_rates table exists
+            cursor = conn.execute("PRAGMA table_info(exchange_rates)")
+            columns = cursor.fetchall()
+            
+            if not columns:
+                # Table doesn't exist yet, no cleanup needed
+                return
+            
+            # Count rates before cleanup
+            cursor = conn.execute("SELECT COUNT(*) FROM exchange_rates")
+            total_before = cursor.fetchone()[0]
+            
+            # Remove all exchange rates from non-TCMB sources
+            cursor = conn.execute("DELETE FROM exchange_rates WHERE source != 'TCMB' OR source IS NULL")
+            removed_count = cursor.rowcount
+            
+            # Count rates after cleanup
+            cursor = conn.execute("SELECT COUNT(*) FROM exchange_rates")
+            total_after = cursor.fetchone()[0]
+            
+            conn.commit()
+            
+            if removed_count > 0:
+                print(f"Cleaned up {removed_count} deprecated exchange rates. {total_after} TCMB rates remain.")
+            
+        except Exception as e:
+            # If cleanup fails, log but don't crash
+            print(f"Warning: Exchange rates cleanup failed: {e}")
+    
     def _get_connection(self) -> sqlite3.Connection:
         """Get database connection with custom row factory"""
         conn = sqlite3.connect(self.db_path)
@@ -308,6 +341,17 @@ class DataStore:
                 return self._row_to_exchange_rate(row) if row else None
         except sqlite3.Error as e:
             raise DatabaseError(f"Failed to get exchange rate: {e}")
+    
+    def get_exchange_rates(self) -> List[ExchangeRate]:
+        """Get all exchange rates"""
+        sql = "SELECT * FROM exchange_rates ORDER BY year DESC, month DESC"
+        
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute(sql).fetchall()
+                return [self._row_to_exchange_rate(row) for row in rows]
+        except sqlite3.Error as e:
+            raise DatabaseError(f"Failed to get exchange rates: {e}")
     
     def _row_to_exchange_rate(self, row: sqlite3.Row) -> ExchangeRate:
         """Convert database row to ExchangeRate object"""
