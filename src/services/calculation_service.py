@@ -86,9 +86,23 @@ class CalculationService:
         rules = agreement.conditional_rules.get("rules", [])
         
         for rule in rules:
-            condition = rule.get("condition", "")
-            if self._evaluate_condition(condition, exchange_rate):
-                return Decimal(str(rule["amount_tl"]))
+            condition_type = rule.get("condition", "")
+            
+            # Handle new date_range format
+            if condition_type == "date_range":
+                # Check if we're in the date range period
+                if self._is_in_date_range(rule):
+                    # Use USD threshold to determine amount
+                    if exchange_rate < Decimal(str(rule["usd_threshold"])):
+                        return Decimal(str(rule["rent_low"]))
+                    else:
+                        return Decimal(str(rule["rent_high"]))
+                # If not in date range, continue to next rule (or return base amount)
+            
+            # Handle old format (backward compatibility)
+            elif condition_type in ["<", ">", "<=", ">=", "==", "="] or any(condition_type.startswith(op) for op in ["<", ">", "="]):
+                if self._evaluate_condition(condition_type, exchange_rate):
+                    return Decimal(str(rule["amount_tl"]))
         
         # No condition matched, return base amount
         return agreement.base_amount_tl
@@ -123,6 +137,39 @@ class CalculationService:
             return rate == threshold
         else:
             raise CalculationError(f"Invalid condition format: {condition}")
+    
+    def _evaluate_date_range_condition(self, rule: dict, exchange_rate: Decimal) -> bool:
+        """
+        Evaluate a date_range condition.
+        
+        Args:
+            rule: Rule dictionary with date_range condition
+            exchange_rate: Current exchange rate
+            
+        Returns:
+            True if the date range condition is applicable
+        """
+        # For date_range conditions, we always return True if we're in the date range
+        # The actual amount calculation is handled by the USD threshold
+        return True
+    
+    def _is_in_date_range(self, rule: dict) -> bool:
+        """
+        Check if current date is within the specified date range.
+        
+        Args:
+            rule: Rule dictionary with start_date and end_date
+            
+        Returns:
+            True if current date is within the range
+        """
+        from datetime import date
+        
+        current_date = date.today()
+        start_date = date.fromisoformat(rule["start_date"])
+        end_date = date.fromisoformat(rule["end_date"])
+        
+        return start_date <= current_date <= end_date
     
     def calculate_market_comparison(
         self, 
