@@ -34,12 +34,25 @@ As a tenant in Turkey preparing for annual rent negotiation, I want to visualize
 
 7. **Given** I have completed my analysis, **When** I export the summary, **Then** I receive a shareable format (image or PDF) that I can easily send via WhatsApp to my landlord
 
+8. **Given** I have rental agreements spanning different legal periods, **When** I generate a negotiation summary, **Then** the system displays the correct legal cap (+25% for pre-July 2024, TÜFE for post-July 2024) with clear labeling
+
+9. **Given** I want to present my case professionally, **When** I select "Calm" negotiation mode, **Then** the system removes growth arrows and uses subdued visuals
+
+10. **Given** I want to emphasize changes strongly, **When** I select "Assertive" negotiation mode, **Then** the system highlights changes with bold numbers and prominent visual indicators
+
+11. **Given** I view the rental payment chart, **When** I look at the timeline, **Then** I see vertical markers labeled "New Agreement (YYYY)" showing contract boundaries
+
+12. **Given** I export a negotiation summary, **When** I review the document, **Then** it includes "Data source: TCMB (exchange rates), TÜFE (inflation)" for transparency
+
 ### Edge Cases
 
 - What happens when exchange rate API is temporarily unavailable?
 - How does the system handle screenshot parsing failures (poor quality, unexpected format)?
 - What if no market listings are found in the screenshot?
 - How should the system validate that parsed rental prices are reasonable?
+- What happens when TÜFE data is unavailable for a specific period?
+- How does the system handle agreements that span the July 1, 2024 legal boundary?
+- What if a user switches negotiation modes mid-session?
 
 ## Requirements *(mandatory)*
 
@@ -68,6 +81,22 @@ As a tenant in Turkey preparing for annual rent negotiation, I want to visualize
 - **FR-011**: System MUST provide a summary view suitable for presenting during rent negotiations, highlighting key arguments (USD stability, market comparisons, legal maximum increase)
 
 - **FR-012**: System MUST fetch and display official Turkish inflation rates to show the legal maximum rent increase the landlord could request
+
+- **FR-013**: System MUST automatically determine which legal rule applies for rent increases based on agreement period (pre-July 2024: +25% cap, post-July 2024: TÜFE)
+
+- **FR-014**: System MUST display legal maximum increase with clear labels ("+25% (limit until July 2024)" or "+CPI (Yearly TÜFE)")
+
+- **FR-015**: System MUST use neutral negotiation phrasing ("Aligned with market average") instead of emotionally charged terms ("Above average")
+
+- **FR-016**: System MUST provide user-selectable negotiation modes (Calm and Assertive)
+
+- **FR-017**: System MUST hide growth arrows and tone down visuals in Calm mode
+
+- **FR-018**: System MUST highlight changes and use bold numbers in Assertive mode
+
+- **FR-019**: System MUST include vertical markers labeled "New Agreement (YYYY)" on the TL vs USD chart to show contract boundaries
+
+- **FR-020**: System MUST include "Data source: TCMB (exchange rates), TÜFE (inflation)" in every exported summary
 
 ### Key Entities
 
@@ -98,6 +127,14 @@ As a tenant in Turkey preparing for annual rent negotiation, I want to visualize
   - Period (month/year)
   - Inflation rate (percentage)
   - Legal maximum rent increase allowed
+
+- **Legal Rule**: Represents the applicable rent increase regulation (fixed cap vs TÜFE) with effective date range and calculation method
+
+- **Negotiation Mode**: User preference setting that controls visual presentation style (Calm/Assertive) and language tone
+
+- **Agreement Period**: Time segment of a rental agreement that determines which legal rule applies
+
+- **TÜFE Data**: Official inflation data from TCMB with date, value, and source attribution
 
 ### Non-Functional Requirements
 
@@ -142,7 +179,7 @@ As a tenant in Turkey preparing for annual rent negotiation, I want to visualize
 - [x] Entities identified
 - [x] Review checklist passed
 
-**Status**: ✅ Ready for `/plan` command
+**Status**: ✅ Updated with new functional requirements - Ready for `/plan` command
 
 ---
 
