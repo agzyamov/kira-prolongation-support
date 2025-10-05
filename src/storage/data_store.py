@@ -48,6 +48,10 @@ class DataStore:
         # Create schema if database is new
         if not db_file.exists() or db_file.stat().st_size == 0:
             self._create_schema()
+        else:
+            # For existing databases, run migrations
+            with self._get_connection() as conn:
+                self._migrate_market_rates_table(conn)
     
     def _create_schema(self):
         """Create database schema with all tables and indexes"""
@@ -138,7 +142,7 @@ class DataStore:
     def _migrate_market_rates_table(self, conn):
         """Migrate market_rates table to remove unique constraint on screenshot_filename"""
         try:
-            # Check if the table exists and has the old unique constraint
+            # Check if the table exists
             cursor = conn.execute("PRAGMA table_info(market_rates)")
             columns = cursor.fetchall()
             
@@ -146,14 +150,17 @@ class DataStore:
                 # Table doesn't exist yet, no migration needed
                 return
             
-            # Check if screenshot_filename has unique constraint
-            filename_col = None
-            for col in columns:
-                if col[1] == 'screenshot_filename':  # col[1] is column name
-                    filename_col = col
+            # Check if there's a unique constraint by looking for auto-index
+            cursor = conn.execute("PRAGMA index_list(market_rates)")
+            indexes = cursor.fetchall()
+            
+            has_unique_constraint = False
+            for idx in indexes:
+                if 'sqlite_autoindex_market_rates' in idx[1] and idx[2] == 1:  # idx[2] is unique flag
+                    has_unique_constraint = True
                     break
             
-            if filename_col and filename_col[5] == 1:  # col[5] is unique constraint
+            if has_unique_constraint:
                 # Need to recreate table without unique constraint
                 # First, backup existing data
                 cursor = conn.execute("SELECT * FROM market_rates")
