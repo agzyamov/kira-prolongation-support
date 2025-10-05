@@ -309,6 +309,10 @@ elif page == "🏘️ Market Comparison":
     st.title("🏘️ Market Comparison")
     st.markdown("Upload screenshots from sahibinden.com to compare market rental rates.")
     
+    # Initialize session state for parsed rates
+    if 'parsed_market_rates' not in st.session_state:
+        st.session_state.parsed_market_rates = []
+    
     # Screenshot upload
     st.subheader("📸 Upload Screenshot")
     
@@ -334,26 +338,33 @@ elif page == "🏘️ Market Comparison":
                     )
                     
                     if market_rates:
+                        # Store in session state
+                        st.session_state.parsed_market_rates = market_rates
                         st.success(f"✅ Found {len(market_rates)} rental prices!")
-                        
-                        # Display and save
-                        for i, rate in enumerate(market_rates):
-                            with st.expander(f"Rate {i+1}: {rate.amount_tl:,.0f} TL"):
-                                col1, col2 = st.columns(2)
-                                with col1:
-                                    st.write(f"**Amount**: {rate.amount_tl:,.0f} TL")
-                                    if rate.location:
-                                        st.write(f"**Location**: {rate.location}")
-                                with col2:
-                                    if st.button(f"💾 Save Rate {i+1}", key=f"save_{i}"):
-                                        services['data_store'].save_market_rate(rate)
-                                        st.success("Saved!")
                     else:
+                        st.session_state.parsed_market_rates = []
                         st.warning("⚠️ No rental prices found in screenshot. Try a clearer image.")
                         
                 except Exception as e:
+                    st.session_state.parsed_market_rates = []
                     st.error(f"❌ OCR Error: {e}")
                     st.exception(e)
+    
+    # Display parsed rates (persists across reruns)
+    if st.session_state.parsed_market_rates:
+        st.markdown("---")
+        for i, rate in enumerate(st.session_state.parsed_market_rates):
+            with st.expander(f"Rate {i+1}: {rate.amount_tl:,.0f} TL"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write(f"**Amount**: {rate.amount_tl:,.0f} TL")
+                    if rate.location:
+                        st.write(f"**Location**: {rate.location}")
+                with col2:
+                    if st.button(f"💾 Save Rate {i+1}", key=f"save_rate_{i}"):
+                        services['data_store'].save_market_rate(rate)
+                        st.success("✅ Saved to database!")
+                        st.rerun()  # Refresh to show in saved rates list
     
     # Display saved market rates
     st.markdown("---")
