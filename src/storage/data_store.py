@@ -250,6 +250,9 @@ class DataStore:
         Returns:
             ID of saved agreement
         """
+        # Check for overlapping agreements before saving
+        self._check_for_overlapping_agreements(agreement)
+        
         sql = """
         INSERT INTO rental_agreements 
             (start_date, end_date, base_amount_tl, conditional_rules, notes, created_at, updated_at)
@@ -276,6 +279,75 @@ class DataStore:
                 return cursor.lastrowid
         except sqlite3.Error as e:
             raise DatabaseError(f"Failed to save rental agreement: {e}")
+    
+    def _check_for_overlapping_agreements(self, new_agreement: RentalAgreement):
+        """Check if new agreement overlaps with existing agreements"""
+        existing_agreements = self.get_rental_agreements()
+        
+        for existing in existing_agreements:
+            if self._agreements_overlap(new_agreement, existing):
+                raise DatabaseError(
+                    f"Agreement overlaps with existing agreement (ID {existing.id}): "
+                    f"{existing.start_date} to {existing.end_date}. "
+                    f"Only one agreement per time period is allowed."
+                )
+    
+    def _agreements_overlap(self, agreement1: RentalAgreement, agreement2: RentalAgreement) -> bool:
+        """Check if two agreements overlap in time"""
+        # Convert to dates for comparison
+        start1 = agreement1.start_date
+        end1 = agreement1.end_date or date.today()  # Treat None as ongoing (today)
+        
+        start2 = agreement2.start_date
+        end2 = agreement2.end_date or date.today()  # Treat None as ongoing (today)
+        
+        # Two periods overlap if one starts before or on the same day as the other ends
+        # This prevents having two active agreements on the same day
+        return start1 <= end2 and start2 <= end1
+    
+    def cleanup_overlapping_agreements(self) -> int:
+        """
+        Clean up overlapping agreements by keeping the most recent one for each overlapping period.
+        This fixes the bug where multiple agreements exist for the same time periods.
+        
+        Returns:
+            Number of agreements removed
+        """
+        agreements = self.get_rental_agreements()
+        if len(agreements) <= 1:
+            return 0  # No overlaps possible
+        
+        # Sort by start_date to process chronologically
+        agreements.sort(key=lambda a: a.start_date)
+        
+        agreements_to_remove = []
+        
+        # Check each agreement against all subsequent ones
+        for i, agreement1 in enumerate(agreements):
+            for j, agreement2 in enumerate(agreements[i+1:], i+1):
+                if self._agreements_overlap(agreement1, agreement2):
+                    # Keep the more recent agreement (higher ID or later start date)
+                    if agreement1.id > agreement2.id or agreement1.start_date > agreement2.start_date:
+                        agreements_to_remove.append(agreement2)
+                    else:
+                        agreements_to_remove.append(agreement1)
+        
+        # Remove duplicates from removal list (by ID)
+        seen_ids = set()
+        unique_agreements_to_remove = []
+        for agreement in agreements_to_remove:
+            if agreement.id not in seen_ids:
+                seen_ids.add(agreement.id)
+                unique_agreements_to_remove.append(agreement)
+        agreements_to_remove = unique_agreements_to_remove
+        
+        # Remove the overlapping agreements
+        removed_count = 0
+        for agreement in agreements_to_remove:
+            if self.delete_rental_agreement(agreement.id):
+                removed_count += 1
+        
+        return removed_count
     
     def get_rental_agreements(self) -> List[RentalAgreement]:
         """Get all rental agreements, ordered by start_date"""
@@ -460,6 +532,23 @@ class DataStore:
                 return [self._row_to_payment_record(row) for row in rows]
         except sqlite3.Error as e:
             raise DatabaseError(f"Failed to get payment records: {e}")
+    
+    def clear_payment_records(self, agreement_id: Optional[int] = None) -> int:
+        """Clear payment records, optionally for a specific agreement"""
+        if agreement_id:
+            sql = "DELETE FROM payment_records WHERE agreement_id = ?"
+            params = (agreement_id,)
+        else:
+            sql = "DELETE FROM payment_records"
+            params = ()
+        
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.execute(sql, params)
+                conn.commit()
+                return cursor.rowcount
+        except sqlite3.Error as e:
+            raise DatabaseError(f"Failed to clear payment records: {e}")
     
     def _row_to_payment_record(self, row: sqlite3.Row) -> PaymentRecord:
         """Convert database row to PaymentRecord object"""
