@@ -51,6 +51,10 @@ class DataStore:
     
     def _create_schema(self):
         """Create database schema with all tables and indexes"""
+        with self._get_connection() as conn:
+            # Check if we need to migrate existing tables
+            self._migrate_market_rates_table(conn)
+        
         schema_sql = """
         CREATE TABLE IF NOT EXISTS rental_agreements (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -94,7 +98,7 @@ class DataStore:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             amount_tl DECIMAL(10, 2) NOT NULL,
             location VARCHAR(255),
-            screenshot_filename VARCHAR(255) NOT NULL UNIQUE,
+            screenshot_filename VARCHAR(255) NOT NULL,
             date_captured DATE NOT NULL,
             confidence DECIMAL(3, 2),
             raw_ocr_text TEXT,
@@ -130,6 +134,63 @@ class DataStore:
                 conn.commit()
         except sqlite3.Error as e:
             raise DatabaseError(f"Failed to create database schema: {e}")
+    
+    def _migrate_market_rates_table(self, conn):
+        """Migrate market_rates table to remove unique constraint on screenshot_filename"""
+        try:
+            # Check if the table exists and has the old unique constraint
+            cursor = conn.execute("PRAGMA table_info(market_rates)")
+            columns = cursor.fetchall()
+            
+            if not columns:
+                # Table doesn't exist yet, no migration needed
+                return
+            
+            # Check if screenshot_filename has unique constraint
+            filename_col = None
+            for col in columns:
+                if col[1] == 'screenshot_filename':  # col[1] is column name
+                    filename_col = col
+                    break
+            
+            if filename_col and filename_col[5] == 1:  # col[5] is unique constraint
+                # Need to recreate table without unique constraint
+                # First, backup existing data
+                cursor = conn.execute("SELECT * FROM market_rates")
+                existing_data = cursor.fetchall()
+                
+                # Drop the old table
+                conn.execute("DROP TABLE market_rates")
+                
+                # Recreate without unique constraint
+                conn.execute("""
+                    CREATE TABLE market_rates (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        amount_tl DECIMAL(10, 2) NOT NULL,
+                        location VARCHAR(255),
+                        screenshot_filename VARCHAR(255) NOT NULL,
+                        date_captured DATE NOT NULL,
+                        confidence DECIMAL(3, 2),
+                        raw_ocr_text TEXT,
+                        property_details TEXT,
+                        notes TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Restore data
+                for row in existing_data:
+                    conn.execute("""
+                        INSERT INTO market_rates 
+                        (id, amount_tl, location, screenshot_filename, date_captured, confidence, raw_ocr_text, property_details, notes, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, row)
+                
+                conn.commit()
+                
+        except Exception as e:
+            # If migration fails, log but don't crash
+            print(f"Warning: Market rates table migration failed: {e}")
     
     def _get_connection(self) -> sqlite3.Connection:
         """Get database connection with custom row factory"""
