@@ -1,23 +1,18 @@
 <!--
 Sync Impact Report:
-Version change: v1.1.0 → v1.2.0
+Version change: v1.2.0 → v1.3.0
 Changes:
-  - Added Principle V: TCMB as Single Source of Truth for Exchange Rates
-  - Technical constraint: Remove backup API fallback, rely only on official Central Bank data
+  - Added Principle VI: Test-Driven Bug Fixes
   - No existing principles modified
 Added sections:
-  - New Principle V
+  - New Principle VI
 Removed sections:
   - None
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md - no changes needed (technical decision documented)
-  ✅ .specify/templates/spec-template.md - no changes needed (NFR-002 already specifies source flexibility)
-  ⚠ src/services/exchange_rate_service.py - REQUIRES CODE UPDATE to remove backup API fallback
-  ⚠ specs/001-problem-statement-i/spec.md - SHOULD update NFR-002 to reflect TCMB-only decision
-Follow-up TODOs:
-  - Remove backup API code from ExchangeRateService
-  - Update spec.md NFR-002 to document TCMB-only approach
-  - Update README.md if it mentions backup APIs
+  ✅ .specify/templates/plan-template.md - no changes needed (testing already covered)
+  ✅ .specify/templates/spec-template.md - no changes needed (testing practices)
+  ✅ .specify/templates/tasks-template.md - no changes needed (testing tasks already included)
+Follow-up TODOs: None
 -->
 
 # Kira Prolongation Support Constitution
@@ -41,6 +36,11 @@ Use only the Central Bank of Turkey (TCMB) as the exchange rate source. Do not i
 
 **Rationale**: For Turkish rental negotiations, using official central bank rates provides the most defensible and legally sound exchange rate data. Backup APIs may use different methodologies or timing, creating inconsistencies in negotiation arguments.
 
+### VI. Test-Driven Bug Fixes
+When a user reports a bug, MUST write a unit test that reproduces the bug first, then fix it. The test serves as regression prevention and validates the fix works. No bug fix commits without accompanying tests.
+
+**Rationale**: User-reported bugs represent real-world failure scenarios that automated tests missed. Capturing them as tests ensures they never return silently and builds confidence in the codebase over time.
+
 ## Governance
 
 This is a personal project. These principles are guidelines, not laws. Change them whenever they stop being helpful.
@@ -50,4 +50,4 @@ This is a personal project. These principles are guidelines, not laws. Change th
 - A principle becomes annoying instead of helpful
 - You learn something that changes your approach
 
-**Version**: 1.2.0 | **Ratified**: 2025-10-05 | **Last Amended**: 2025-10-05
+**Version**: 1.3.0 | **Ratified**: 2025-10-05 | **Last Amended**: 2025-10-05

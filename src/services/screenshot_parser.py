@@ -68,9 +68,10 @@ class ScreenshotParserService:
     def preprocess_image(self, image: Image.Image) -> Image.Image:
         """
         Preprocess image for better OCR accuracy.
+        - Upscale image for better small text recognition
         - Convert to grayscale
         - Enhance contrast
-        - Apply slight sharpening
+        - Apply sharpening
         
         Args:
             image: Original PIL Image
@@ -78,15 +79,23 @@ class ScreenshotParserService:
         Returns:
             Preprocessed PIL Image
         """
+        # Upscale image 2x for better OCR on small text (like map markers)
+        width, height = image.size
+        image = image.resize((width * 2, height * 2), Image.Resampling.LANCZOS)
+        
         # Convert to grayscale
         image = image.convert('L')
         
-        # Enhance contrast
+        # Enhance contrast significantly
         enhancer = ImageEnhance.Contrast(image)
+        image = enhancer.enhance(2.5)
+        
+        # Enhance sharpness
+        enhancer = ImageEnhance.Sharpness(image)
         image = enhancer.enhance(2.0)
         
-        # Sharpen
-        image = image.filter(ImageFilter.SHARPEN)
+        # Apply edge enhancement for small text
+        image = image.filter(ImageFilter.EDGE_ENHANCE_MORE)
         
         return image
     
