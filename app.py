@@ -231,7 +231,8 @@ elif page == "💰 Payment Records":
                 try:
                     # Generate payment records for this agreement
                     start_date = selected_agreement.start_date
-                    end_date = selected_agreement.end_date or date.today()
+                    # Only calculate up to current month, not future months
+                    end_date = min(selected_agreement.end_date or date.today(), date.today())
                     
                     current_date = start_date
                     payments_generated = 0
