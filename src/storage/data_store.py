@@ -343,7 +343,7 @@ class DataStore:
                         rate.location,
                         rate.screenshot_filename,
                         rate.date_captured.isoformat(),
-                        rate.confidence,
+                        float(rate.confidence) if rate.confidence is not None else None,
                         rate.raw_ocr_text,
                         rate.property_details,
                         rate.notes,
