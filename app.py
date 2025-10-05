@@ -315,7 +315,8 @@ elif page == "🏘️ Market Comparison":
     uploaded_file = st.file_uploader(
         "Choose a screenshot",
         type=['png', 'jpg', 'jpeg'],
-        help="Upload a screenshot from sahibinden.com showing rental prices"
+        help="Upload a screenshot from sahibinden.com showing rental prices",
+        key="market_screenshot_uploader"
     )
     
     if uploaded_file:
@@ -515,7 +516,8 @@ elif page == "📊 Inflation Data":
     uploaded_csv = st.file_uploader(
         "Upload CSV file",
         type=['csv'],
-        help="CSV format: month,year,inflation_rate_percent,source"
+        help="CSV format: month,year,inflation_rate_percent,source",
+        key="inflation_csv_uploader"
     )
     
     if uploaded_csv:
