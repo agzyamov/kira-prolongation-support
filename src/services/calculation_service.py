@@ -83,6 +83,9 @@ class CalculationService:
         if not agreement.has_conditional_pricing():
             return agreement.base_amount_tl
         
+        if not agreement.conditional_rules:
+            return agreement.base_amount_tl
+            
         rules = agreement.conditional_rules.get("rules", [])
         
         for rule in rules:
@@ -157,10 +160,10 @@ class CalculationService:
         
         return {
             "count": count,
-            "total_tl": total_tl.quantize(Decimal("0.01")),
-            "total_usd": total_usd.quantize(Decimal("0.01")),
-            "avg_tl": (total_tl / count).quantize(Decimal("0.01")),
-            "avg_usd": (total_usd / count).quantize(Decimal("0.01")),
+            "total_tl": Decimal(str(total_tl)).quantize(Decimal("0.01")),
+            "total_usd": Decimal(str(total_usd)).quantize(Decimal("0.01")),
+            "avg_tl": Decimal(str(total_tl / count)).quantize(Decimal("0.01")),
+            "avg_usd": Decimal(str(total_usd / count)).quantize(Decimal("0.01")),
             "min_tl": min(p.amount_tl for p in payments),
             "max_tl": max(p.amount_tl for p in payments),
             "min_usd": min(p.amount_usd for p in payments),
