@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import Dict, List, Optional
 from datetime import date
 
-from src.models import RentalAgreement, ExchangeRate, PaymentRecord, MarketRate
+from src.models import RentalAgreement, ExchangeRate, PaymentRecord
 from src.services.exceptions import CalculationError
 
 
@@ -124,54 +124,6 @@ class CalculationService:
         else:
             raise CalculationError(f"Invalid condition format: {condition}")
     
-    def calculate_market_comparison(
-        self, 
-        user_rent: Decimal, 
-        market_rates: List[MarketRate]
-    ) -> Dict:
-        """
-        Compare user's rent with market rates.
-        
-        Args:
-            user_rent: User's current/proposed rent in TL
-            market_rates: List of market rental rates
-            
-        Returns:
-            Dictionary with comparison statistics
-        """
-        if not market_rates:
-            return {
-                "market_count": 0,
-                "market_avg": None,
-                "market_min": None,
-                "market_max": None,
-                "user_vs_avg_percent": None,
-                "position": "no_data"
-            }
-        
-        amounts = [rate.amount_tl for rate in market_rates]
-        market_avg = sum(amounts) / len(amounts)
-        market_min = min(amounts)
-        market_max = max(amounts)
-        
-        user_vs_avg_percent = self.calculate_percentage_increase(market_avg, user_rent)
-        
-        # Determine position
-        if user_rent < market_avg:
-            position = "below_average"
-        elif user_rent > market_avg:
-            position = "above_average"
-        else:
-            position = "at_average"
-        
-        return {
-            "market_count": len(market_rates),
-            "market_avg": market_avg.quantize(Decimal("0.01")),
-            "market_min": market_min.quantize(Decimal("0.01")),
-            "market_max": market_max.quantize(Decimal("0.01")),
-            "user_vs_avg_percent": user_vs_avg_percent,
-            "position": position
-        }
     
     def calculate_payment_summary(
         self, 

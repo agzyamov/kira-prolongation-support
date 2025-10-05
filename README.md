@@ -72,15 +72,11 @@ The app will open in your browser at `http://localhost:8501`
    - Calculate TL and USD amounts for each month
    - View payment history
 
-4. **Upload Market Data** (🏘️ Market Comparison page)
-   - Upload screenshots from sahibinden.com
-   - OCR will extract rental prices automatically
-
-5. **View Visualizations** (📈 Visualizations page)
+4. **View Visualizations** (📈 Visualizations page)
    - See TL vs USD charts
-   - Compare with market rates
+   - Track payment history over time
 
-6. **Export for Negotiation** (🤝 Negotiation Summary page)
+5. **Export for Negotiation** (🤝 Negotiation Summary page)
    - View key statistics
    - Export charts as PNG for WhatsApp
 
@@ -116,7 +112,6 @@ requirements.txt      # Python dependencies
 - ✅ Rental agreement management with conditional pricing
 - ✅ Exchange rate fetching from TCMB (Central Bank of Turkey) - official source only
 - ✅ Payment record calculation (TL and USD)
-- ✅ Screenshot OCR for market rental prices
 - ✅ Interactive Plotly visualizations
 - ✅ Export charts as PNG (WhatsApp-optimized)
 - ✅ Inflation data import and legal max calculations
@@ -128,9 +123,8 @@ requirements.txt      # Python dependencies
 1. **Rental Agreements**: Manage your rental history
 2. **Exchange Rates**: Fetch/view USD/TRY rates
 3. **Payment Records**: See calculated payments over time
-4. **Market Comparison**: Upload and parse sahibinden.com screenshots
-5. **Visualizations**: Interactive TL vs USD charts
-6. **Negotiation Summary**: Key stats for landlord discussions
+4. **Visualizations**: Interactive TL vs USD charts
+5. **Negotiation Summary**: Key stats for landlord discussions
 7. **Inflation Data**: Import official inflation rates
 
 ## Development

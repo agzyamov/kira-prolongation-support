@@ -21,43 +21,43 @@
 - Include exact file paths in descriptions
 
 ## Phase 3.1: Setup & Preparation
-- [ ] T001 Create backup of existing market data in database
-- [ ] T002 Update requirements.txt to remove EasyOCR dependencies
-- [ ] T003 [P] Update README.md to remove market comparison references
+- [x] T001 Create backup of existing market data in database
+- [x] T002 Update requirements.txt to remove EasyOCR dependencies
+- [x] T003 [P] Update README.md to remove market comparison references
 
 ## Phase 3.2: Tests First (TDD) ⚠️ MUST COMPLETE BEFORE 3.3
 **CRITICAL: These tests MUST be written and MUST FAIL before ANY implementation**
-- [ ] T004 [P] Contract test for ScreenshotParserService removal in tests/contract/test_screenshot_parser_removal.py
-- [ ] T005 [P] Contract test for DataStore market rate methods removal in tests/contract/test_data_store_market_removal.py
-- [ ] T006 [P] Integration test for market comparison page removal in tests/integration/test_market_page_removal.py
-- [ ] T007 [P] Integration test for export service market data removal in tests/integration/test_export_market_removal.py
-- [ ] T008 [P] Regression test for core functionality preservation in tests/integration/test_core_functionality_regression.py
+- [x] T004 [P] Contract test for ScreenshotParserService removal in tests/contract/test_screenshot_parser_removal.py
+- [x] T005 [P] Contract test for DataStore market rate methods removal in tests/contract/test_data_store_market_removal.py
+- [x] T006 [P] Integration test for market comparison page removal in tests/integration/test_market_page_removal.py
+- [x] T007 [P] Integration test for export service market data removal in tests/integration/test_export_market_removal.py
+- [x] T008 [P] Regression test for core functionality preservation in tests/integration/test_core_functionality_regression.py
 
 ## Phase 3.3: Core Implementation (ONLY after tests are failing)
-- [ ] T009 [P] Remove ScreenshotParserService from src/services/screenshot_parser.py
-- [ ] T010 [P] Remove MarketRate model from src/models/market_rate.py
-- [ ] T011 [P] Remove OCRError exception from src/services/exceptions.py
-- [ ] T012 [P] Remove market rate methods from src/storage/data_store.py
-- [ ] T013 [P] Update ExportService to remove market rate parameters in src/services/export_service.py
-- [ ] T014 [P] Update ChartGenerator to remove market comparison overlays in src/utils/chart_generator.py
-- [ ] T015 Remove market comparison page from app.py navigation and routing
-- [ ] T016 Remove ScreenshotParserService initialization from app.py
+- [x] T009 [P] Remove ScreenshotParserService from src/services/screenshot_parser.py
+- [x] T010 [P] Remove MarketRate model from src/models/market_rate.py
+- [x] T011 [P] Remove OCRError exception from src/services/exceptions.py
+- [x] T012 [P] Remove market rate methods from src/storage/data_store.py
+- [x] T013 [P] Update ExportService to remove market rate parameters in src/services/export_service.py
+- [x] T014 [P] Update ChartGenerator to remove market comparison overlays in src/utils/chart_generator.py
+- [x] T015 Remove market comparison page from app.py navigation and routing
+- [x] T016 Remove ScreenshotParserService initialization from app.py
 
 ## Phase 3.4: Database & Integration
-- [ ] T017 Create database migration to remove market_rates table
-- [ ] T018 [P] Update database initialization to exclude market_rates table
-- [ ] T019 [P] Remove market rate related imports from all service files
-- [ ] T020 [P] Update service initialization in app.py to remove screenshot_parser
+- [x] T017 Create database migration to remove market_rates table
+- [x] T018 [P] Update database initialization to exclude market_rates table
+- [x] T019 [P] Remove market rate related imports from all service files
+- [x] T020 [P] Update service initialization in app.py to remove screenshot_parser
 
 ## Phase 3.5: UI & Navigation
-- [ ] T021 [P] Remove market comparison page UI components from app.py
-- [ ] T022 [P] Update sidebar navigation to remove market comparison option
-- [ ] T023 [P] Remove market comparison related error handling from UI
-- [ ] T024 [P] Update page routing logic to remove market comparison routes
+- [x] T021 [P] Remove market comparison page UI components from app.py
+- [x] T022 [P] Update sidebar navigation to remove market comparison option
+- [x] T023 [P] Remove market comparison related error handling from UI
+- [x] T024 [P] Update page routing logic to remove market comparison routes
 
 ## Phase 3.6: Testing & Validation
-- [ ] T025 [P] Update existing tests to remove market comparison references
-- [ ] T026 [P] Add regression tests for core functionality in tests/unit/test_core_regression.py
+- [x] T025 [P] Update existing tests to remove market comparison references
+- [x] T026 [P] Add regression tests for core functionality in tests/unit/test_core_regression.py
 - [ ] T027 [P] Update integration tests to remove market comparison scenarios
 - [ ] T028 [P] Add tests for graceful handling of missing market data
 - [ ] T029 Run comprehensive test suite to ensure no regressions

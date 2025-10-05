@@ -111,14 +111,4 @@ class TestTotalCalculations:
         pytest.skip("Requires PaymentRecord model implementation")
 
 
-class TestMarketComparison:
-    """Test market rate comparison calculations"""
-    
-    def test_compare_with_market_rates(self):
-        """Test comparing current rent with market rates"""
-        pytest.skip("Requires MarketRate model implementation")
-    
-    def test_market_percentile_calculation(self):
-        """Test calculating where rent falls in market"""
-        pytest.skip("Requires MarketRate model implementation")
 

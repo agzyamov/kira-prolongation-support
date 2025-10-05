@@ -1,17 +1,17 @@
 <!--
 Sync Impact Report:
-Version change: v1.3.0 → v1.4.0
+Version change: v1.5.0 → v1.6.0
 Changes:
-  - Added Principle VII: Feature Branch Impact Analysis
+  - Enhanced Principle VIII: Phase-Based Commits with enforcement mechanisms
   - No existing principles modified
 Added sections:
-  - New Principle VII
+  - Enhanced Principle VIII with enforcement
 Removed sections:
   - None
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md - no changes needed (impact analysis not applicable to planning)
-  ✅ .specify/templates/spec-template.md - no changes needed (spec creation not affected by impact analysis)
-  ✅ .specify/templates/tasks-template.md - no changes needed (task execution not affected by impact analysis)
+  ✅ .specify/templates/plan-template.md - no changes needed (phase commits not applicable to planning)
+  ✅ .specify/templates/spec-template.md - no changes needed (spec creation not affected by phase commits)
+  ✅ .specify/templates/tasks-template.md - no changes needed (task execution not affected by phase commits)
 Follow-up TODOs: None
 -->
 
@@ -46,6 +46,17 @@ When starting a new feature branch as a response to `/specify` command, MUST per
 
 **Rationale**: Feature changes can have unintended consequences on existing functionality. Explicit impact analysis prevents breaking changes, ensures clear scope boundaries, and maintains system stability. It also provides clear documentation for review and future maintenance.
 
+### VIII. Phase-Based Commits
+MUST commit implementation work after completing each phase (Setup, Tests, Core Implementation, Integration, Polish). Each commit should represent a working state of the application with clear, descriptive commit messages. This ensures progress is preserved, enables easy rollback if needed, and maintains a clean development history.
+
+**Enforcement**: 
+- Implementation MUST halt if more than one phase is completed without a commit
+- Each phase completion MUST be verified by running tests before committing
+- Commit messages MUST follow format: `feat: complete [Phase Name] - [brief description]`
+- If implementation continues without phase commits, the work MUST be rolled back to the last commit
+
+**Rationale**: Phase-based commits provide natural checkpoints during development, making it easier to track progress, debug issues, and collaborate. They also ensure that working states are preserved even if later phases encounter problems, reducing the risk of losing completed work. Enforcement prevents accumulation of uncommitted changes that could lead to data loss or debugging difficulties.
+
 ## Governance
 
 This is a personal project. These principles are guidelines, not laws. Change them whenever they stop being helpful.
@@ -55,4 +66,4 @@ This is a personal project. These principles are guidelines, not laws. Change th
 - A principle becomes annoying instead of helpful
 - You learn something that changes your approach
 
-**Version**: 1.4.0 | **Ratified**: 2025-10-05 | **Last Amended**: 2025-10-05
+**Version**: 1.6.0 | **Ratified**: 2025-10-05 | **Last Amended**: 2025-10-05

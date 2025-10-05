@@ -7,7 +7,7 @@ from plotly.subplots import make_subplots
 from typing import List, Dict
 from decimal import Decimal
 
-from src.models import PaymentRecord, MarketRate
+from src.models import PaymentRecord
 
 
 class ChartGenerator:
@@ -19,7 +19,6 @@ class ChartGenerator:
     # Color scheme
     COLOR_TL = "#E74C3C"  # Red - emphasizes TL increase
     COLOR_USD = "#27AE60"  # Green - emphasizes USD stability
-    COLOR_MARKET = "#3498DB"  # Blue - market rates
     COLOR_LEGAL = "#F39C12"  # Orange - legal maximum
     
     def create_tl_vs_usd_chart(
@@ -163,83 +162,6 @@ class ChartGenerator:
         
         return fig
     
-    def create_market_comparison_chart(
-        self, 
-        user_rent: Decimal,
-        market_rates: List[MarketRate],
-        title: str = "Your Rent vs Market Rates"
-    ) -> go.Figure:
-        """
-        Create chart comparing user's rent with market rates.
-        
-        Args:
-            user_rent: User's current/proposed rent
-            market_rates: List of market rental rates
-            title: Chart title
-            
-        Returns:
-            Plotly Figure object
-        """
-        if not market_rates:
-            # Return empty chart with message
-            fig = go.Figure()
-            fig.add_annotation(
-                text="No market data available",
-                xref="paper",
-                yref="paper",
-                x=0.5,
-                y=0.5,
-                showarrow=False,
-                font=dict(size=20)
-            )
-            return fig
-        
-        # Extract market amounts
-        market_amounts = [float(rate.amount_tl) for rate in market_rates]
-        market_avg = sum(market_amounts) / len(market_amounts)
-        
-        # Create box plot with user's rent
-        fig = go.Figure()
-        
-        # Market rates box plot
-        fig.add_trace(go.Box(
-            y=market_amounts,
-            name='Market Rates',
-            marker_color=self.COLOR_MARKET,
-            boxmean='sd'
-        ))
-        
-        # User's rent as horizontal line
-        fig.add_hline(
-            y=float(user_rent),
-            line_dash="dash",
-            line_color=self.COLOR_TL,
-            line_width=3,
-            annotation_text=f"Your Rent: {user_rent:,.0f} TL",
-            annotation_position="right"
-        )
-        
-        # Market average line
-        fig.add_hline(
-            y=market_avg,
-            line_dash="dot",
-            line_color=self.COLOR_MARKET,
-            line_width=2,
-            annotation_text=f"Market Avg: {market_avg:,.0f} TL",
-            annotation_position="left"
-        )
-        
-        fig.update_layout(
-            title=title,
-            title_font_size=18,
-            yaxis_title="Monthly Rent (TL)",
-            showlegend=False,
-            height=500,
-            template="plotly_white"
-        )
-        
-        return fig
-    
     def create_negotiation_summary_chart(
         self, 
         data: Dict
@@ -274,7 +196,7 @@ class ChartGenerator:
             x=categories,
             y=tl_values,
             marker=dict(
-                color=[self.COLOR_USD, self.COLOR_TL, self.COLOR_MARKET, self.COLOR_LEGAL],
+                color=[self.COLOR_USD, self.COLOR_TL, self.COLOR_LEGAL],
                 opacity=0.7
             ),
             text=[f"{v:,.0f} TL" for v in tl_values],

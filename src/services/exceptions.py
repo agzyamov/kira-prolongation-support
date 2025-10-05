@@ -13,11 +13,6 @@ class ExchangeRateAPIError(ServiceError):
     pass
 
 
-class OCRError(ServiceError):
-    """Raised when OCR processing fails"""
-    pass
-
-
 class CalculationError(ServiceError):
     """Raised when calculation fails"""
     pass

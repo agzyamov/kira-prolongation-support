@@ -13,11 +13,10 @@ from src.storage import DataStore
 from src.services import (
     ExchangeRateService,
     InflationService,
-    ScreenshotParserService,
     CalculationService,
     ExportService
 )
-from src.models import RentalAgreement, MarketRate
+from src.models import RentalAgreement
 from src.utils import ChartGenerator
 
 # Page configuration
@@ -37,7 +36,6 @@ def init_services():
         'data_store': data_store,
         'exchange_rate_service': ExchangeRateService(data_store),
         'inflation_service': InflationService(data_store),
-        'screenshot_parser': ScreenshotParserService(),
         'calculation_service': CalculationService(),
         'export_service': ExportService(),
         'chart_generator': ChartGenerator()
@@ -55,7 +53,6 @@ page = st.sidebar.radio(
         "📋 Rental Agreements",
         "💱 Exchange Rates",
         "💰 Payment Records",
-        "🏘️ Market Comparison",
         "📈 Visualizations",
         "🤝 Negotiation Summary",
         "📊 Inflation Data"
@@ -305,71 +302,6 @@ elif page == "💰 Payment Records":
         else:
             st.info("No payment records yet. Click 'Calculate Payment Records' to generate them.")
 
-elif page == "🏘️ Market Comparison":
-    st.title("🏘️ Market Comparison")
-    st.markdown("Upload screenshots from sahibinden.com to compare market rental rates.")
-    
-    # Screenshot upload
-    st.subheader("📸 Upload Screenshot")
-    
-    uploaded_file = st.file_uploader(
-        "Choose a screenshot",
-        type=['png', 'jpg', 'jpeg'],
-        help="Upload a screenshot from sahibinden.com showing rental prices"
-    )
-    
-    if uploaded_file:
-        # Display image
-        image = Image.open(uploaded_file)
-        st.image(image, caption="Uploaded Screenshot", use_column_width=True)
-        
-        if st.button("🔍 Parse Screenshot"):
-            with st.spinner("Processing with OCR..."):
-                try:
-                    # Parse screenshot
-                    market_rates = services['screenshot_parser'].parse_screenshot(
-                        image,
-                        uploaded_file.name
-                    )
-                    
-                    if market_rates:
-                        st.success(f"✅ Found {len(market_rates)} rental prices!")
-                        
-                        # Display and save
-                        for i, rate in enumerate(market_rates):
-                            with st.expander(f"Rate {i+1}: {rate.amount_tl:,.0f} TL"):
-                                col1, col2 = st.columns(2)
-                                with col1:
-                                    st.write(f"**Amount**: {rate.amount_tl:,.0f} TL")
-                                    if rate.location:
-                                        st.write(f"**Location**: {rate.location}")
-                                with col2:
-                                    if st.button(f"💾 Save Rate {i+1}", key=f"save_{i}"):
-                                        services['data_store'].save_market_rate(rate)
-                                        st.success("Saved!")
-                    else:
-                        st.warning("⚠️ No rental prices found in screenshot. Try a clearer image.")
-                        
-                except Exception as e:
-                    st.error(f"❌ OCR Error: {e}")
-                    st.exception(e)
-    
-    # Display saved market rates
-    st.markdown("---")
-    st.subheader("📊 Saved Market Rates")
-    
-    market_rates = services['data_store'].get_market_rates()
-    
-    if market_rates:
-        for rate in market_rates:
-            with st.expander(f"{rate.amount_tl:,.0f} TL - {rate.location or 'Unknown'} ({rate.date_captured})"):
-                st.write(f"**Screenshot**: {rate.screenshot_filename}")
-                if rate.raw_ocr_text:
-                    with st.expander("View raw OCR text"):
-                        st.text(rate.raw_ocr_text)
-    else:
-        st.info("No market rates saved yet.")
-
 elif page == "📈 Visualizations":
     st.title("📈 Visualizations")
     st.markdown("Interactive charts showing your rental payment trends.")
@@ -390,16 +322,6 @@ elif page == "📈 Visualizations":
         fig2 = services['chart_generator'].create_payment_comparison_bar_chart(payments)
         st.plotly_chart(fig2, use_container_width=True)
         
-        # Market comparison
-        market_rates = services['data_store'].get_market_rates()
-        if market_rates and len(market_rates) > 0:
-            st.subheader("🏘️ Market Comparison")
-            latest_payment = sorted(payments, key=lambda p: (p.year, p.month))[-1]
-            fig3 = services['chart_generator'].create_market_comparison_chart(
-                latest_payment.amount_tl,
-                market_rates
-            )
-            st.plotly_chart(fig3, use_container_width=True)
 
 elif page == "🤝 Negotiation Summary":
     st.title("🤝 Negotiation Summary")
@@ -408,7 +330,6 @@ elif page == "🤝 Negotiation Summary":
     # Get latest data
     payments = services['data_store'].get_payment_records()
     agreements = services['data_store'].get_rental_agreements()
-    market_rates = services['data_store'].get_market_rates()
     
     if not payments or not agreements:
         st.warning("⚠️ Need payment records and agreements to generate summary.")
@@ -458,22 +379,6 @@ elif page == "🤝 Negotiation Summary":
                 "Current Rent (USD)",
                 f"${latest_payment.amount_usd:,.2f}"
             )
-        
-        # Market comparison
-        if market_rates:
-            st.subheader("🏘️ Market Position")
-            comparison = services['calculation_service'].calculate_market_comparison(
-                latest_payment.amount_tl,
-                market_rates
-            )
-            
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Market Average", f"{comparison['market_avg']:,.0f} TL")
-            with col2:
-                st.metric("Your Position", comparison['position'].replace('_', ' ').title())
-            with col3:
-                st.metric("vs Market Avg", f"{comparison['user_vs_avg_percent']:,.1f}%")
         
         # Export section
         st.markdown("---")

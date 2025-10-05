@@ -13,7 +13,6 @@ from src.models import (
     RentalAgreement,
     ExchangeRate,
     PaymentRecord,
-    MarketRate,
     InflationData
 )
 
@@ -88,19 +87,6 @@ class DataStore:
             FOREIGN KEY (agreement_id) REFERENCES rental_agreements(id),
             FOREIGN KEY (exchange_rate_id) REFERENCES exchange_rates(id),
             UNIQUE(agreement_id, month, year)
-        );
-        
-        CREATE TABLE IF NOT EXISTS market_rates (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            amount_tl DECIMAL(10, 2) NOT NULL,
-            location VARCHAR(255),
-            screenshot_filename VARCHAR(255) NOT NULL UNIQUE,
-            date_captured DATE NOT NULL,
-            confidence DECIMAL(3, 2),
-            raw_ocr_text TEXT,
-            property_details TEXT,
-            notes TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         
         CREATE TABLE IF NOT EXISTS inflation_data (
@@ -320,63 +306,6 @@ class DataStore:
             amount_usd=Decimal(str(row['amount_usd'])),
             exchange_rate_id=row['exchange_rate_id'],
             payment_date=date.fromisoformat(row['payment_date']) if row['payment_date'] else None,
-            notes=row['notes'],
-            created_at=datetime.fromisoformat(row['created_at'])
-        )
-    
-    # === MarketRate Methods ===
-    
-    def save_market_rate(self, rate: MarketRate) -> int:
-        """Save market rate from screenshot"""
-        sql = """
-        INSERT INTO market_rates 
-            (amount_tl, location, screenshot_filename, date_captured, confidence, raw_ocr_text, property_details, notes, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """
-        
-        try:
-            with self._get_connection() as conn:
-                cursor = conn.execute(
-                    sql,
-                    (
-                        str(rate.amount_tl),
-                        rate.location,
-                        rate.screenshot_filename,
-                        rate.date_captured.isoformat(),
-                        rate.confidence,
-                        rate.raw_ocr_text,
-                        rate.property_details,
-                        rate.notes,
-                        rate.created_at.isoformat()
-                    )
-                )
-                conn.commit()
-                return cursor.lastrowid
-        except sqlite3.Error as e:
-            raise DatabaseError(f"Failed to save market rate: {e}")
-    
-    def get_market_rates(self, verified_only: bool = False) -> List[MarketRate]:
-        """Get market rates"""
-        sql = "SELECT * FROM market_rates ORDER BY date_captured DESC"
-        
-        try:
-            with self._get_connection() as conn:
-                rows = conn.execute(sql).fetchall()
-                return [self._row_to_market_rate(row) for row in rows]
-        except sqlite3.Error as e:
-            raise DatabaseError(f"Failed to get market rates: {e}")
-    
-    def _row_to_market_rate(self, row: sqlite3.Row) -> MarketRate:
-        """Convert database row to MarketRate object"""
-        return MarketRate(
-            id=row['id'],
-            amount_tl=Decimal(str(row['amount_tl'])),
-            location=row['location'],
-            screenshot_filename=row['screenshot_filename'],
-            date_captured=date.fromisoformat(row['date_captured']),
-            confidence=float(row['confidence']) if row['confidence'] else None,
-            raw_ocr_text=row['raw_ocr_text'],
-            property_details=row['property_details'],
             notes=row['notes'],
             created_at=datetime.fromisoformat(row['created_at'])
         )
