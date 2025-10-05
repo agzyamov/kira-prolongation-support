@@ -1,8 +1,10 @@
 """
 Screenshot parser service using OCR to extract rental prices.
+Uses EasyOCR for better recognition of stylized text on sahibinden.com maps.
 """
 import re
-import pytesseract
+import easyocr
+import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter
 from decimal import Decimal
 from typing import List, Optional
@@ -16,7 +18,12 @@ class ScreenshotParserService:
     """
     Service for parsing rental prices from sahibinden.com screenshots using OCR.
     Handles Turkish number formats and location extraction.
+    Uses EasyOCR for improved accuracy on map markers.
     """
+    
+    def __init__(self):
+        """Initialize EasyOCR reader with Turkish language support."""
+        self.reader = easyocr.Reader(['tr'], gpu=False)
     
     def parse_screenshot(
         self, 
@@ -40,12 +47,22 @@ class ScreenshotParserService:
             # Preprocess image for better OCR
             processed_image = self.preprocess_image(image)
             
-            # Perform OCR
-            text = pytesseract.image_to_string(processed_image, lang='tur')
+            # Convert PIL Image to numpy array for EasyOCR
+            image_array = np.array(processed_image)
+            
+            # Perform OCR with EasyOCR
+            # Returns: list of (bbox, text, confidence)
+            ocr_results = self.reader.readtext(image_array)
+            
+            # Combine all detected text
+            text = " ".join([text for _, text, _ in ocr_results])
             
             # Extract prices and location
             prices = self.extract_all_prices_from_text(text)
             location = self.extract_location(text)
+            
+            # Calculate average confidence
+            avg_confidence = sum(conf for _, _, conf in ocr_results) / len(ocr_results) if ocr_results else 0.0
             
             # Create MarketRate objects
             market_rates = []
@@ -55,7 +72,7 @@ class ScreenshotParserService:
                     screenshot_filename=screenshot_filename,
                     date_captured=date.today(),
                     location=location,
-                    confidence=None,  # Could add confidence calculation
+                    confidence=Decimal(str(round(avg_confidence, 2))),
                     raw_ocr_text=text
                 )
                 market_rates.append(market_rate)
