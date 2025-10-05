@@ -123,7 +123,7 @@ requirements.txt      # Python dependencies
 
 ### ✅ Implemented
 - ✅ Rental agreement management with conditional pricing
-- ✅ Exchange rate fetching from TCMB API + fallback
+- ✅ Exchange rate fetching from TCMB (Central Bank of Turkey) - official source only
 - ✅ Payment record calculation (TL and USD)
 - ✅ Screenshot OCR for market rental prices
 - ✅ Interactive Plotly visualizations

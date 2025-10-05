@@ -16,15 +16,12 @@ from src.utils import validate_month, validate_year
 class ExchangeRateService:
     """
     Service for fetching USD/TRY exchange rates.
-    Primary source: TCMB (Central Bank of Turkey)
-    Fallback: exchangerate-api.com or similar free API
+    Source: TCMB (Central Bank of Turkey) - official exchange rates only.
+    No backup APIs per Constitution Principle V.
     """
     
     # TCMB API endpoint
     TCMB_API_URL = "https://www.tcmb.gov.tr/kurlar/{year}{month:02d}/{day:02d}{month:02d}{year}.xml"
-    
-    # Backup API (free tier)
-    BACKUP_API_URL = "https://api.exchangerate-api.com/v4/latest/USD"
     
     def __init__(self, data_store: DataStore):
         """
@@ -38,7 +35,7 @@ class ExchangeRateService:
     def fetch_rate(self, month: int, year: int) -> ExchangeRate:
         """
         Fetch exchange rate for specific month/year.
-        Uses cache first, then fetches from API if needed.
+        Uses cache first, then fetches from TCMB API if needed.
         
         Args:
             month: Month (1-12)
@@ -48,7 +45,7 @@ class ExchangeRateService:
             ExchangeRate object
             
         Raises:
-            ExchangeRateAPIError: If all APIs fail
+            ExchangeRateAPIError: If TCMB API fails (use manual entry as alternative)
         """
         validate_month(month)
         validate_year(year)
@@ -58,21 +55,15 @@ class ExchangeRateService:
         if cached_rate:
             return cached_rate
         
-        # Try TCMB API
+        # Fetch from TCMB API (single source of truth per Constitution Principle V)
         try:
             rate = self._fetch_from_tcmb(month, year)
             self.data_store.save_exchange_rate(rate)
             return rate
         except Exception as tcmb_error:
-            # TCMB failed, try backup
-            try:
-                rate = self._fetch_from_backup_api(month, year)
-                self.data_store.save_exchange_rate(rate)
-                return rate
-            except Exception as backup_error:
-                raise ExchangeRateAPIError(
-                    f"All APIs failed. TCMB: {tcmb_error}, Backup: {backup_error}"
-                )
+            raise ExchangeRateAPIError(
+                f"TCMB API failed: {tcmb_error}. Please use manual entry instead."
+            )
     
     def _fetch_from_tcmb(self, month: int, year: int) -> ExchangeRate:
         """
@@ -120,42 +111,6 @@ class ExchangeRateService:
             rate_tl_per_usd=rate_value,
             source="TCMB",
             notes=f"Fetched from TCMB on {datetime.now().date()}"
-        )
-    
-    def _fetch_from_backup_api(self, month: int, year: int) -> ExchangeRate:
-        """
-        Fetch exchange rate from backup API.
-        
-        Note: Most free APIs only provide current/recent rates,
-        not historical. This is a simplified fallback.
-        
-        Args:
-            month: Month (1-12)
-            year: Year
-            
-        Returns:
-            ExchangeRate object
-            
-        Raises:
-            Exception: If backup API fails
-        """
-        response = requests.get(self.BACKUP_API_URL, timeout=10)
-        response.raise_for_status()
-        
-        data = response.json()
-        
-        # Get TRY rate (this gives USD to TRY)
-        if 'rates' not in data or 'TRY' not in data['rates']:
-            raise Exception("TRY rate not found in backup API response")
-        
-        rate_value = Decimal(str(data['rates']['TRY']))
-        
-        return ExchangeRate(
-            month=month,
-            year=year,
-            rate_tl_per_usd=rate_value,
-            source="ExchangeRate-API",
-            notes=f"Fetched from backup API on {datetime.now().date()}"
         )
     
     def get_cached_rate(self, month: int, year: int) -> Optional[ExchangeRate]:

@@ -114,11 +114,11 @@ If Pytesseract accuracy is poor, add fallback to manual entry (simpler than swit
 
 **Conclusion**: Pytesseract is appropriate - free, simple, good enough for typed numbers.
 
-### 4. Exchange Rate API: TCMB + Backup
+### 4. Exchange Rate API: TCMB Only
 
-**Decision**: TCMB (Central Bank of Turkey) as primary, exchangerate-api.io as backup
+**Decision**: TCMB (Central Bank of Turkey) as single source of truth
 
-**TCMB (Primary)**:
+**TCMB (Official Source)**:
 - **Source**: Central Bank of Republic of Turkey (official rates)
 - **URL**: https://www.tcmb.gov.tr/kurlar/ (XML format)
 - **Format**: SOAP/XML (requires parsing)
@@ -127,24 +127,18 @@ If Pytesseract accuracy is poor, add fallback to manual entry (simpler than swit
 - **Historical Data**: Available back to 1996
 - **Reliability**: High (government server)
 
-**exchangerate-api.io (Backup)**:
-- **Free Tier**: 1,500 requests/month
-- **Format**: REST API, JSON
-- **Historical Data**: Yes (back to 1999)
-- **USD/TRY**: Supported
-- **Reliability**: Good for free tier
-
-**Rationale**:
-- TCMB is most credible source for Turkish negotiations (landlords can't dispute)
-- Free with no limits
-- Backup API ensures reliability if TCMB server down
+**Rationale** (per Constitution Principle V):
+- TCMB is the only legally authoritative source for Turkish financial data
+- Using official central bank rates provides strongest negotiation position
+- Backup APIs may use different methodologies or timing, creating inconsistencies
+- Manual entry available as fallback if TCMB temporarily unavailable
 
 **Implementation Strategy**:
-1. Try TCMB first (parse XML)
-2. If TCMB fails, use exchangerate-api.io
-3. Cache rates locally in SQLite to minimize API calls
+1. Fetch from TCMB (parse XML)
+2. Cache rates locally in SQLite to minimize API calls
+3. If TCMB fails, raise error and guide user to manual entry
 
-**Conclusion**: TCMB primary for credibility, exchangerate-api.io for reliability.
+**Conclusion**: TCMB only for legal defensibility and data consistency.
 
 ### 5. Turkish Inflation Data: TUIK
 

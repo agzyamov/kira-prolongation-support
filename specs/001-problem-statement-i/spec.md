@@ -49,7 +49,7 @@ As a tenant in Turkey preparing for annual rent negotiation, I want to visualize
 
 - **FR-002**: System MUST store rental agreement history persistently
 
-- **FR-003**: System MUST automatically fetch historical USD/TL exchange rates from a free, open, and reputable source (e.g., exchangerate-api.io, TCMB open data, or similar)
+- **FR-003**: System MUST automatically fetch historical USD/TL exchange rates from TCMB (Central Bank of Turkey) exclusively, as the most authoritative source for Turkish financial data
 
 - **FR-004**: System MUST calculate the USD equivalent of each TL rental payment using the monthly average exchange rate for that payment period
 
@@ -103,7 +103,7 @@ As a tenant in Turkey preparing for annual rent negotiation, I want to visualize
 
 - **NFR-001**: Visualizations MUST be clear, simple, and optimized to present a strong negotiation position
 
-- **NFR-002**: Exchange rate data MUST be from a free, open, and reputable source with good reliability
+- **NFR-002**: Exchange rate data MUST come exclusively from TCMB (Central Bank of Turkey) to ensure accuracy and legal defensibility. No backup APIs or fallback mechanisms (manual entry allowed if TCMB unavailable)
 
 - **NFR-003**: System MUST work as a web application or desktop application that requires no paid infrastructure and is usable by non-developer users (e.g., can be shared with colleagues in Turkey)
 
