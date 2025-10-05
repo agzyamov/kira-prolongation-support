@@ -144,9 +144,9 @@ Integration & Polish (T027-T030)
 
 ---
 
-## Phase 3.4: Storage Layer (1 task)
+## Phase 3.4: Storage Layer (1 task) ✅ COMPLETE
 
-- [ ] **T016** - Implement SQLite DataStore
+- [x] **T016** - Implement SQLite DataStore
   - Create database schema from data-model.md (all 5 tables)
   - Implement all CRUD methods from contracts/service-interfaces.md
   - Add indexes for performance
