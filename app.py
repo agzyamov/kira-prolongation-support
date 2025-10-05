@@ -242,9 +242,10 @@ elif page == "💰 Payment Records":
                         rate = services['exchange_rate_service'].fetch_rate(current_date.month, current_date.year)
                         
                         # Calculate amount (considering conditional rules)
-                        amount_tl = services['calculation_service'].apply_conditional_rules(
+                        amount_tl = services['calculation_service'].apply_conditional_rules_for_date(
                             selected_agreement,
-                            rate.rate_tl_per_usd
+                            rate.rate_tl_per_usd,
+                            current_date  # Use the payment date, not current date
                         )
                         
                         # Calculate USD equivalent

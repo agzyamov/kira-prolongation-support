@@ -171,6 +171,68 @@ class CalculationService:
         
         return start_date <= current_date <= end_date
     
+    def apply_conditional_rules_for_date(
+        self, 
+        agreement: RentalAgreement, 
+        exchange_rate: Decimal,
+        payment_date: date
+    ) -> Decimal:
+        """
+        Apply conditional pricing rules for a specific payment date.
+        
+        This method is used when calculating historical payments to ensure
+        the correct rules are applied for each specific month, not the current date.
+        
+        Args:
+            agreement: Rental agreement with conditional rules
+            exchange_rate: USD/TRY exchange rate for the payment month
+            payment_date: The specific date for which to calculate the payment
+            
+        Returns:
+            Calculated rent amount in TL for the specific date
+        """
+        if not agreement.has_conditional_pricing():
+            return agreement.base_amount_tl
+        
+        rules = agreement.conditional_rules.get("rules", [])
+        
+        for rule in rules:
+            condition_type = rule.get("condition", "")
+            
+            # Handle new date_range format
+            if condition_type == "date_range":
+                # Check if the payment date is within the date range period
+                if self._is_payment_date_in_range(rule, payment_date):
+                    # Use USD threshold to determine amount
+                    if exchange_rate < Decimal(str(rule["usd_threshold"])):
+                        return Decimal(str(rule["rent_low"]))
+                    else:
+                        return Decimal(str(rule["rent_high"]))
+            
+            # Handle old format (backward compatibility)
+            elif condition_type in ["<", ">", "<=", ">=", "==", "="] or any(condition_type.startswith(op) for op in ["<", ">", "="]):
+                if self._evaluate_condition(condition_type, exchange_rate):
+                    return Decimal(str(rule["amount_tl"]))
+        
+        # No condition matched, return base amount
+        return agreement.base_amount_tl
+    
+    def _is_payment_date_in_range(self, rule: dict, payment_date: date) -> bool:
+        """
+        Check if payment date is within the specified date range.
+        
+        Args:
+            rule: Rule dictionary with start_date and end_date
+            payment_date: The specific payment date to check
+            
+        Returns:
+            True if payment date is within the range
+        """
+        start_date = date.fromisoformat(rule["start_date"])
+        end_date = date.fromisoformat(rule["end_date"])
+        
+        return start_date <= payment_date <= end_date
+    
     def calculate_market_comparison(
         self, 
         user_rent: Decimal, 
