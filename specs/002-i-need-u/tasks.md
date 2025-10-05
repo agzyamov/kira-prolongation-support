@@ -58,17 +58,17 @@
 ## Phase 3.6: Testing & Validation
 - [x] T025 [P] Update existing tests to remove market comparison references
 - [x] T026 [P] Add regression tests for core functionality in tests/unit/test_core_regression.py
-- [ ] T027 [P] Update integration tests to remove market comparison scenarios
-- [ ] T028 [P] Add tests for graceful handling of missing market data
-- [ ] T029 Run comprehensive test suite to ensure no regressions
-- [ ] T030 Execute quickstart.md test scenarios
+- [x] T027 [P] Update integration tests to remove market comparison scenarios
+- [x] T028 [P] Add tests for graceful handling of missing market data
+- [x] T029 Run comprehensive test suite to ensure no regressions
+- [x] T030 Execute quickstart.md test scenarios
 
 ## Phase 3.7: Documentation & Cleanup
-- [ ] T031 [P] Update app.py comments to remove market comparison references
-- [ ] T032 [P] Update service documentation to remove market comparison methods
-- [ ] T033 [P] Clean up any remaining market comparison references in code
-- [ ] T034 [P] Update error messages to remove market comparison references
-- [ ] T035 [P] Remove unused imports and dependencies from all files
+- [x] T031 [P] Update app.py comments to remove market comparison references
+- [x] T032 [P] Update service documentation to remove market comparison methods
+- [x] T033 [P] Clean up any remaining market comparison references in code
+- [x] T034 [P] Update error messages to remove market comparison references
+- [x] T035 [P] Remove unused imports and dependencies from all files
 
 ## Dependencies
 - Tests (T004-T008) before implementation (T009-T016)

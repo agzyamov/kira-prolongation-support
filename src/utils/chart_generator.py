@@ -175,17 +175,15 @@ class ChartGenerator:
                 - proposed_tl: Proposed rent in TL
                 - current_usd: Current rent in USD
                 - proposed_usd: Proposed rent in USD
-                - market_avg: Market average rent
                 - legal_max: Legal maximum rent
                 
         Returns:
             Plotly Figure object
         """
-        categories = ['Current', 'Proposed', 'Market Avg', 'Legal Max']
+        categories = ['Current', 'Proposed', 'Legal Max']
         tl_values = [
             float(data.get('current_tl', 0)),
             float(data.get('proposed_tl', 0)),
-            float(data.get('market_avg', 0)),
             float(data.get('legal_max', 0))
         ]
         
