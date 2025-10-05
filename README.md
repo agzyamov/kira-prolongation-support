@@ -35,6 +35,11 @@ A data-driven application that:
 git clone <your-repo-url>
 cd kira-prolongation-support
 
+# Create and activate virtual environment (required for Python 3.11+)
+python3 -m venv .venv
+source .venv/bin/activate  # On macOS/Linux
+# OR on Windows: .venv\Scripts\activate
+
 # Install dependencies
 pip install -r requirements.txt
 
@@ -52,6 +57,11 @@ sudo apt-get install tesseract-ocr tesseract-ocr-tur
 ### 2. Run the Application
 
 ```bash
+# Make sure virtual environment is activated
+source .venv/bin/activate  # On macOS/Linux
+# OR on Windows: .venv\Scripts\activate
+
+# Run the app
 streamlit run app.py
 ```
 
