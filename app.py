@@ -801,7 +801,7 @@ elif page == "📊 Inflation Data":
                         
                         # Show the data
                         for item in inflation_data:
-                            st.write(f"📊 {item.year}-{item.month:02d}: {item.tufe_rate}%")
+                            st.write(f"📊 {item.year}-{item.month:02d}: {item.inflation_rate_percent}%")
                     else:
                         st.warning("⚠️ No TÜFE data found for the current year")
                         

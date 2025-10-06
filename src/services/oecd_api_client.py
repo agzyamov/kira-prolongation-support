@@ -144,10 +144,16 @@ class OECDApiClient:
                     if dim_id and dim_value:
                         dimensions[dim_id] = dim_value
                 
-                # Check if this is Turkey monthly CPI data
-                if (dimensions.get('REF_AREA') == SDMX_CONFIG["target_country"] and 
-                    dimensions.get('MEASURE') == SDMX_CONFIG["target_measure"] and
-                    dimensions.get('UNIT_MEASURE') == SDMX_CONFIG["target_unit"]):
+                # Debug: Log dimensions for first few observations to understand the structure
+                if len(data_points) < 3:
+                    print(f"DEBUG: Observed dimensions: {dimensions}")
+                
+                # Check if this is Turkey annual CPI data (TÜFE - Yıllık % Değişim)
+                # We want only the main Turkey CPI series, not sub-components
+                if (dimensions.get('REF_AREA') == 'TUR' and 
+                    dimensions.get('MEASURE') == 'CPALTT01' and
+                    dimensions.get('FREQ') == 'M' and
+                    dimensions.get('UNIT_MEASURE') == 'PA'):
                     
                     # Extract observation value
                     obs_value = obs.find('.//{http://www.sdmx.org/resources/sdmxml/schemas/v2_1/data/generic}ObsValue')

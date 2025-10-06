@@ -223,6 +223,51 @@ class TufeServiceError(Exception):
         return f"TufeServiceError(message='{super().__str__()}', service_name='{self.service_name}')"
 
 
+# Additional exception classes for other services
+class ServiceError(Exception):
+    """Base exception for all service errors."""
+    pass
+
+class ExchangeRateAPIError(Exception):
+    """Exception for exchange rate API errors."""
+    pass
+
+class CalculationError(Exception):
+    """Exception for calculation errors."""
+    pass
+
+class ExportError(Exception):
+    """Exception for export errors."""
+    pass
+
+class CSVParseError(Exception):
+    """Exception for CSV parsing errors."""
+    pass
+
+class NegotiationModeError(Exception):
+    """Exception for negotiation mode errors."""
+    pass
+
+class LegalRuleError(Exception):
+    """Exception for legal rule errors."""
+    pass
+
+class TufeDataError(Exception):
+    """Exception for TÜFE data errors."""
+    pass
+
+class TufeDataSourceError(Exception):
+    """Exception for TÜFE data source errors."""
+    pass
+
+class TufeApiKeyError(Exception):
+    """Exception for TÜFE API key errors."""
+    pass
+
+class TufeConfigError(Exception):
+    """Exception for TÜFE configuration errors."""
+    pass
+
 # Exception hierarchy for better error handling
 TufeException = Exception  # Base for all TÜFE exceptions
 

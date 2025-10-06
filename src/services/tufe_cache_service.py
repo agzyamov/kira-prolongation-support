@@ -295,14 +295,14 @@ class TufeCacheService:
                 if not (1 <= item.month <= 12):
                     raise TufeValidationError(f"Invalid month: {item.month}")
                 
-                if item.tufe_rate < 0:
-                    raise TufeValidationError(f"Invalid TÜFE rate: {item.tufe_rate}")
+                if item.inflation_rate_percent < 0:
+                    raise TufeValidationError(f"Invalid TÜFE rate: {item.inflation_rate_percent}")
                 
                 # Create cache entry
                 cache_entry = TufeDataCache(
                     year=item.year,
                     month=item.month,
-                    tufe_rate=item.tufe_rate,
+                    tufe_rate=item.inflation_rate_percent,
                     source_name=item.source,
                     fetched_at=datetime.now(),
                     expires_at=datetime.now() + timedelta(hours=ttl_hours),
@@ -347,7 +347,7 @@ class TufeCacheService:
                 return InflationData(
                     year=cache_entry.year,
                     month=cache_entry.month,
-                    tufe_rate=cache_entry.tufe_rate,
+                    inflation_rate_percent=cache_entry.tufe_rate,
                     source=cache_entry.source_name
                 )
             

@@ -15,7 +15,11 @@ from .exceptions import (
     TufeDataSourceError,
     TufeApiKeyError,
     TufeCacheError,
-    TufeConfigError
+    TufeConfigError,
+    TufeRateLimitError,
+    TufeDataNotFoundError,
+    TufeConfigurationError,
+    TufeServiceError
 )
 from .exchange_rate_service import ExchangeRateService
 from .inflation_service import InflationService
@@ -45,6 +49,10 @@ __all__ = [
     "TufeApiKeyError",
     "TufeCacheError",
     "TufeConfigError",
+    "TufeRateLimitError",
+    "TufeDataNotFoundError",
+    "TufeConfigurationError",
+    "TufeServiceError",
     # Services
     "ExchangeRateService",
     "InflationService",

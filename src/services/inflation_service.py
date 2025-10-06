@@ -490,7 +490,7 @@ class InflationService:
                     inflation_item = InflationData(
                         year=item['year'],
                         month=item['month'],
-                        tufe_rate=Decimal(str(item['value'])),
+                        inflation_rate_percent=Decimal(str(item['value'])),
                         source='OECD SDMX API'
                     )
                     inflation_data.append(inflation_item)
