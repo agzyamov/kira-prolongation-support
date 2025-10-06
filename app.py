@@ -79,7 +79,7 @@ def init_services():
         'tufe_api_key_service': TufeApiKeyService(data_store),          # Manages API keys securely
         'tufe_cache_service': TufeCacheService(data_store),             # Manages TÜFE data caching
         'tufe_config_service': TufeConfigService(),                     # Manages TÜFE configuration
-        'tcmb_api_client': TCMBApiClient('')                            # TCMB EVDS API client
+        'tcmb_api_client': None  # Will be initialized with actual API key when needed
     }
 
 services = init_services()
@@ -603,6 +603,8 @@ elif page == "📊 Inflation Data":
         2. Register for an account
         3. Generate an API key from your dashboard
         4. Enter the key below to start fetching official TÜFE data
+        
+        **Note**: If you get a "Connection error" when validating, this is common with TCMB API due to firewall restrictions. You can still save your API key and test it when fetching data.
         """)
     
     # Check if API key is configured
@@ -617,6 +619,33 @@ elif page == "📊 Inflation Data":
             st.warning("⚠️ TCMB API key is configured but not valid")
     else:
         st.warning("⚠️ TCMB API key is not configured")
+    
+    # Debug section
+    if st.button("🔍 Debug API Key Status"):
+        st.write("**Current API Key Status:**")
+        st.write(f"- Configured: {is_api_configured}")
+        if is_api_configured:
+            api_key = services['tufe_config_service'].get_tcmb_api_key()
+            if api_key:
+                st.write(f"- API Key Length: {len(api_key)}")
+                st.write(f"- API Key Preview: {api_key[:20]}...")
+            else:
+                st.write("- API Key: None")
+        
+        # Check session state
+        if 'tcmb_api_key' in st.session_state:
+            st.write(f"- Session State Key Length: {len(st.session_state['tcmb_api_key'])}")
+            st.write(f"- Session State Key Preview: {st.session_state['tcmb_api_key'][:20]}...")
+        else:
+            st.write("- Session State: No API key stored")
+    
+    # Test API key setting
+    if st.button("🧪 Test: Set Sample API Key"):
+        test_key = "test_tcmb_api_key_12345678901234567890123456789012"
+        services['tufe_config_service'].set_tcmb_api_key(test_key)
+        st.session_state['tcmb_api_key'] = test_key
+        st.success("✅ Test API key set!")
+        st.rerun()
     
     # API Key Configuration Form
     with st.expander("⚙️ Configure TCMB API Key", expanded=not is_api_configured):
@@ -635,31 +664,56 @@ elif page == "📊 Inflation Data":
                 if st.form_submit_button("🔑 Validate API Key"):
                     if api_key:
                         try:
-                            # Test the API key
+                            # Test the API key with detailed feedback
                             test_client = TCMBApiClient(api_key)
-                            is_valid = test_client.validate_api_key()
+                            validation_result = test_client.validate_api_key_detailed()
                             
-                            if is_valid:
+                            if validation_result["valid"]:
                                 # Save the API key
                                 services['tufe_config_service'].set_tcmb_api_key(api_key)
-                                st.success("✅ API key validated and saved successfully!")
+                                st.success(f"✅ {validation_result['message']}")
                                 st.rerun()
                             else:
-                                st.error("❌ API key validation failed. Please check your key.")
+                                # Show detailed error message
+                                st.error(f"❌ {validation_result['message']}")
+                                
+                                # Provide additional help based on error type
+                                if validation_result["error"] == "unauthorized":
+                                    st.info("💡 **Help**: Make sure you copied the API key correctly from your TCMB EVDS dashboard.")
+                                elif validation_result["error"] == "forbidden":
+                                    st.info("💡 **Help**: Your API key might be valid but your account may not have permission to access TÜFE data.")
+                                elif validation_result["error"] == "connection_error":
+                                    st.info("💡 **Help**: Check your internet connection and try again.")
+                                elif validation_result["error"] == "timeout":
+                                    st.info("💡 **Help**: The TCMB API is taking too long to respond. Try again in a few minutes.")
+                                    
                         except Exception as e:
                             st.error(f"❌ Error validating API key: {e}")
                     else:
                         st.error("❌ Please enter an API key")
             
             with col2:
-                if st.form_submit_button("💾 Save API Key"):
+                if st.form_submit_button("💾 Save API Key (Skip Validation)"):
                     if api_key:
                         try:
+                            # Save to configuration service
                             services['tufe_config_service'].set_tcmb_api_key(api_key)
+                            
+                            # Also save to session state as backup
+                            st.session_state['tcmb_api_key'] = api_key
+                            
                             st.success("✅ API key saved successfully!")
+                            st.info("ℹ️ **Note**: API key saved without validation. You can test it later when fetching TÜFE data.")
+                            
+                            # Debug info
+                            st.write(f"🔍 **Debug**: API key length: {len(api_key)}")
+                            st.write(f"🔍 **Debug**: API key starts with: {api_key[:10]}...")
+                            
                             st.rerun()
                         except Exception as e:
                             st.error(f"❌ Error saving API key: {e}")
+                            import traceback
+                            st.error(f"Full error: {traceback.format_exc()}")
                     else:
                         st.error("❌ Please enter an API key")
     
@@ -714,25 +768,33 @@ elif page == "📊 Inflation Data":
         if st.button("🔄 Fetch from TCMB API"):
             if not is_api_configured:
                 st.error("❌ Please configure TCMB API key first")
-            elif not api_key_valid:
-                st.error("❌ Please validate your TCMB API key first")
             else:
                 with st.spinner("Fetching TÜFE data from TCMB API..."):
                     try:
+                        # Try to get API key from config service first, then session state
                         api_key = services['tufe_config_service'].get_tcmb_api_key()
-                        tufe_rate = services['inflation_service'].fetch_tufe_from_tcmb_api(current_year, api_key)
-                        if tufe_rate is not None:
-                            # Save the fetched TÜFE data
-                            services['inflation_service'].save_manual_entry(
-                                month=12,  # Year-end data
-                                year=current_year,
-                                inflation_rate_percent=tufe_rate,
-                                source="TCMB EVDS API"
-                            )
-                            st.success(f"✅ TÜFE data fetched from TCMB API: {tufe_rate}%")
-                            st.rerun()
+                        if not api_key and 'tcmb_api_key' in st.session_state:
+                            api_key = st.session_state['tcmb_api_key']
+                            st.info(f"🔍 **Debug**: Using API key from session state (length: {len(api_key)})")
+                        
+                        if not api_key:
+                            st.error("❌ No API key found. Please configure your TCMB API key first.")
                         else:
-                            st.warning("⚠️ TÜFE data not found in TCMB API. Please enter manually.")
+                            st.info(f"🔍 **Debug**: Using API key (length: {len(api_key)}, starts with: {api_key[:10]}...)")
+                            tufe_rate = services['inflation_service'].fetch_tufe_from_tcmb_api(current_year, api_key)
+                            
+                            if tufe_rate is not None:
+                                # Save the fetched TÜFE data
+                                services['inflation_service'].save_manual_entry(
+                                    month=12,  # Year-end data
+                                    year=current_year,
+                                    inflation_rate_percent=tufe_rate,
+                                    source="TCMB EVDS API"
+                                )
+                                st.success(f"✅ TÜFE data fetched from TCMB API: {tufe_rate}%")
+                                st.rerun()
+                            else:
+                                st.warning("⚠️ TÜFE data not found in TCMB API. Please enter manually.")
                     except Exception as e:
                         st.error(f"❌ Error fetching from TCMB API: {e}")
                         st.info("Please enter TÜFE data manually.")
