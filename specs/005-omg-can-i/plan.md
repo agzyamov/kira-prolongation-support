@@ -1,6 +1,7 @@
+
 # Implementation Plan: Easy TÜFE Data Fetching
 
-**Branch**: `005-omg-can-i` | **Date**: 2025-10-06 | **Spec**: /specs/005-omg-can-i/spec.md
+**Branch**: `005-omg-can-i` | **Date**: 2025-01-27 | **Spec**: `/specs/005-omg-can-i/spec.md`
 **Input**: Feature specification from `/specs/005-omg-can-i/spec.md`
 
 ## Execution Flow (/plan command scope)
@@ -30,43 +31,42 @@
 - Phase 3-4: Implementation execution (manual or via tools)
 
 ## Summary
-**Primary Requirement**: Provide one-click TÜFE data fetching without complex API configuration or technical setup
-**Technical Approach**: Implement multiple data source fallbacks with automatic source selection, smart caching, and graceful error handling to create a seamless user experience
+Implement one-click TÜFE data fetching using OECD API as the primary and only data source, with automatic caching, rate limit respect, and fallback to manual entry when needed. The system will provide zero-configuration access to Turkish inflation data for rental negotiations.
 
 ## Technical Context
 **Language/Version**: Python 3.13  
-**Primary Dependencies**: Streamlit 1.50.0, Requests 2.32.3, Pandas 2.3.0  
-**Storage**: SQLite (existing database with TÜFE tables)  
-**Testing**: Pytest 8.3.0  
+**Primary Dependencies**: Streamlit 1.50.0, Requests 2.32.3, Pandas 2.3.0, SQLite  
+**Storage**: SQLite with existing TÜFE tables (tufe_data_sources, tufe_api_keys, tufe_data_cache)  
+**Testing**: pytest 8.3.0  
 **Target Platform**: Web application (Streamlit)  
-**Project Type**: Single project (existing rental negotiation support tool)  
-**Performance Goals**: <2 seconds for TÜFE data fetch, <100ms cache lookup  
-**Constraints**: Must work without user configuration, handle network failures gracefully  
-**Scale/Scope**: Single user application, 10-50 TÜFE data points per session  
+**Project Type**: single (existing rental negotiation support tool)  
+**Performance Goals**: <2s response time for TÜFE data fetch, <500ms for cached data  
+**Constraints**: Must respect OECD API rate limits, offline-capable with cached data, zero user configuration required  
+**Scale/Scope**: Single user application, existing codebase integration
 
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
 ### Simple and Direct Check
-- [x] Solution is straightforward and easy to understand
-- [x] No unnecessary abstractions or patterns added
-- [x] Code structure is as simple as possible for the requirements
+- [x] Solution is straightforward and easy to understand (OECD API integration with caching)
+- [x] No unnecessary abstractions or patterns added (direct API calls with simple caching)
+- [x] Code structure is as simple as possible for the requirements (single service class)
 
 ### Test What Matters Check
-- [x] Test strategy focuses on critical paths and hard-to-verify behavior
-- [x] Not over-testing simple or obvious functionality
-- [x] Tests provide real confidence, not just coverage
+- [x] Test strategy focuses on critical paths and hard-to-verify behavior (API integration, rate limiting, caching)
+- [x] Not over-testing simple or obvious functionality (focus on integration and error handling)
+- [x] Tests provide real confidence, not just coverage (API connectivity, data validation)
 
 ### Done Over Perfect Check
-- [x] Feature scope is focused on working functionality
-- [x] Not gold-plating or over-engineering
-- [x] Plan enables shipping something useful quickly
+- [x] Feature scope is focused on working functionality (one-click fetch with caching)
+- [x] Not gold-plating or over-engineering (simple OECD API integration)
+- [x] Plan enables shipping something useful quickly (leverages existing infrastructure)
 
 ## Project Structure
 
 ### Documentation (this feature)
 ```
-specs/005-omg-can-i/
+specs/[###-feature]/
 ├── plan.md              # This file (/plan command output)
 ├── research.md          # Phase 0 output (/plan command)
 ├── data-model.md        # Phase 1 output (/plan command)
@@ -79,41 +79,50 @@ specs/005-omg-can-i/
 ```
 src/
 ├── models/
-│   ├── tufe_data_source.py      # Enhanced with reliability ratings
-│   ├── tufe_api_key.py          # Enhanced with auto-configuration
-│   └── tufe_data_cache.py       # Enhanced with smart expiration
+│   ├── tufe_data_source.py
+│   ├── tufe_api_key.py
+│   ├── tufe_data_cache.py
+│   └── inflation_data.py
 ├── services/
-│   ├── tufe_fetch_service.py    # NEW: Orchestrates multiple sources
-│   ├── tufe_source_manager.py   # NEW: Manages source reliability
-│   └── tufe_auto_config.py      # NEW: Zero-config setup
-└── utils/
-    └── tufe_validator.py        # NEW: Data validation
+│   ├── tufe_data_source_service.py
+│   ├── tufe_api_key_service.py
+│   ├── tufe_cache_service.py
+│   ├── tcmb_api_client.py
+│   └── inflation_service.py
+└── storage/
+    └── data_store.py
 
 tests/
 ├── contract/
-│   ├── test_tufe_fetch_service.py
-│   └── test_tufe_source_manager.py
+│   ├── test_tufe_data_source_service.py
+│   ├── test_tufe_api_key_service.py
+│   ├── test_tufe_cache_service.py
+│   └── test_tcmb_api_client.py
 ├── integration/
-│   ├── test_easy_tufe_fetching.py
-│   └── test_source_fallback.py
+│   ├── test_tufe_data_fetching.py
+│   └── test_data_source_attribution.py
 └── unit/
-    ├── test_tufe_auto_config.py
-    └── test_tufe_validator.py
+    ├── test_tufe_data_source.py
+    ├── test_tufe_api_key.py
+    └── test_tufe_data_cache.py
+
+app.py  # Main Streamlit application
 ```
 
-**Structure Decision**: Single project structure with enhanced TÜFE services and new orchestration layer
+**Structure Decision**: Single project structure with existing TÜFE infrastructure. The feature will extend existing services and models rather than creating new ones.
 
 ## Phase 0: Outline & Research
 1. **Extract unknowns from Technical Context** above:
-   - Research alternative TÜFE data sources beyond TCMB API
-   - Find best practices for automatic source selection and fallback
-   - Research data validation patterns for inflation data
+   - For each NEEDS CLARIFICATION → research task
+   - For each dependency → best practices task
+   - For each integration → patterns task
 
 2. **Generate and dispatch research agents**:
    ```
-   Task: "Research alternative TÜFE data sources for Turkish inflation data"
-   Task: "Find best practices for automatic API source selection and fallback patterns"
-   Task: "Research data validation patterns for financial/inflation data"
+   For each unknown in Technical Context:
+     Task: "Research {unknown} for {feature context}"
+   For each technology choice:
+     Task: "Find best practices for {tech} in {domain}"
    ```
 
 3. **Consolidate findings** in `research.md` using format:
@@ -127,27 +136,32 @@ tests/
 *Prerequisites: research.md complete*
 
 1. **Extract entities from feature spec** → `data-model.md`:
-   - Enhanced TÜFE Data Source with reliability ratings
-   - TÜFE Fetch Session for tracking operations
-   - Source Manager for automatic selection
+   - Entity name, fields, relationships
+   - Validation rules from requirements
+   - State transitions if applicable
 
 2. **Generate API contracts** from functional requirements:
-   - One-click fetch endpoint
-   - Source status endpoint
-   - Cache management endpoint
+   - For each user action → endpoint
+   - Use standard REST/GraphQL patterns
+   - Output OpenAPI/GraphQL schema to `/contracts/`
 
 3. **Generate contract tests** from contracts:
-   - Test easy fetch functionality
-   - Test source fallback behavior
-   - Test cache operations
+   - One test file per endpoint
+   - Assert request/response schemas
+   - Tests must fail (no implementation yet)
 
 4. **Extract test scenarios** from user stories:
-   - One-click fetch success scenario
-   - Source failure fallback scenario
-   - Zero-configuration setup scenario
+   - Each story → integration test scenario
+   - Quickstart test = story validation steps
 
 5. **Update agent file incrementally** (O(1) operation):
    - Run `.specify/scripts/bash/update-agent-context.sh cursor`
+     **IMPORTANT**: Execute it exactly as specified above. Do not add or remove any arguments.
+   - If exists: Add only NEW tech from current plan
+   - Preserve manual additions between markers
+   - Update recent changes (keep last 3)
+   - Keep under 150 lines for token efficiency
+   - Output to repository root
 
 **Output**: data-model.md, /contracts/*, failing tests, quickstart.md, agent-specific file
 
@@ -183,8 +197,9 @@ tests/
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| Multiple data sources | TCMB API often blocked by firewalls | Single source insufficient for reliability |
-| Source reliability tracking | Need to automatically select best source | Manual source selection too complex for users |
+| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+
 
 ## Progress Tracking
 *This checklist is updated during execution flow*
@@ -193,7 +208,7 @@ tests/
 - [x] Phase 0: Research complete (/plan command)
 - [x] Phase 1: Design complete (/plan command)
 - [x] Phase 2: Task planning complete (/plan command - describe approach only)
-- [x] Phase 3: Tasks generated (/tasks command)
+- [ ] Phase 3: Tasks generated (/tasks command)
 - [ ] Phase 4: Implementation complete
 - [ ] Phase 5: Validation passed
 
@@ -201,7 +216,7 @@ tests/
 - [x] Initial Constitution Check: PASS
 - [x] Post-Design Constitution Check: PASS
 - [x] All NEEDS CLARIFICATION resolved
-- [x] Complexity deviations documented
+- [ ] Complexity deviations documented
 
 ---
-*Based on Constitution v1.6.0 - See `.specify/memory/constitution.md`*
+*Based on Constitution v1.0.0 - See `.specify/memory/constitution.md`*

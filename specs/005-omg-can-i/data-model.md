@@ -1,210 +1,240 @@
 # Data Model: Easy TÜFE Data Fetching
 
 **Feature**: 005-omg-can-i  
-**Date**: 2025-10-06  
+**Date**: 2025-01-27  
 **Status**: Complete
 
-## Entity Overview
+## Overview
 
-This feature extends the existing TÜFE data infrastructure with enhanced source management, automatic fallback, and zero-configuration capabilities.
+This feature extends the existing TÜFE data infrastructure to support easy fetching from OECD API. The data model builds upon existing entities while adding new components for rate limiting and enhanced caching.
 
-## Enhanced Entities
+## Existing Entities (Extended)
 
-### TufeDataSource (Enhanced)
-**Purpose**: Represents different sources of Turkish inflation data with reliability tracking
-
-**Fields**:
-- `id`: Primary key (existing)
-- `name`: Source name (e.g., "TCMB EVDS", "TÜİK API") (existing)
-- `api_endpoint`: Base URL for API calls (existing)
-- `is_active`: Whether source is currently available (existing)
-- `created_at`: Timestamp of creation (existing)
-- `updated_at`: Timestamp of last update (existing)
-- **NEW**: `priority`: Integer (1-10, lower = higher priority)
-- **NEW**: `reliability_score`: Float (0.0-1.0, based on success rate)
-- **NEW**: `last_health_check`: Timestamp of last health check
-- **NEW**: `health_status`: Enum (healthy, degraded, failed, unknown)
-- **NEW**: `failure_count`: Integer (consecutive failures)
-- **NEW**: `success_count`: Integer (consecutive successes)
-- **NEW**: `avg_response_time`: Float (milliseconds)
-- **NEW**: `rate_limit_remaining`: Integer (API rate limit remaining)
-- **NEW**: `rate_limit_reset`: Timestamp (when rate limit resets)
-
-**Validation Rules**:
-- Priority must be between 1 and 10
-- Reliability score must be between 0.0 and 1.0
-- Health status must be one of: healthy, degraded, failed, unknown
-- Failure count and success count must be non-negative integers
-
-**State Transitions**:
-- `unknown` → `healthy`: First successful health check
-- `healthy` → `degraded`: Response time > threshold or rate limit issues
-- `degraded` → `healthy`: Performance improves
-- `degraded` → `failed`: Consecutive failures exceed threshold
-- `failed` → `healthy`: Successful health check after failure period
-
-### TufeFetchSession (New)
-**Purpose**: Tracks the status of TÜFE data fetching operations
+### TufeDataSource
+**Purpose**: Represents OECD API as the primary TÜFE data source
 
 **Fields**:
 - `id`: Primary key
-- `session_id`: Unique identifier for the fetch session
-- `requested_year`: Year for which TÜFE data was requested
-- `status`: Enum (pending, in_progress, success, failed, cancelled)
-- `started_at`: Timestamp when fetch started
-- `completed_at`: Timestamp when fetch completed
-- `source_attempts`: JSON array of source attempts with timestamps
-- `final_source`: Source that provided the data (if successful)
-- `error_message`: Error message if fetch failed
-- `retry_count`: Number of retry attempts
-- `user_id`: Optional user identifier for tracking
+- `name`: "OECD SDMX API"
+- `endpoint`: "https://stats.oecd.org/restsdmx/sdmx.ashx/GetData/PRICES_CPI/A.TUR.CPALTT01.M/all"
+- `api_type`: "SDMX"
+- `requires_auth`: false
+- `priority`: 1 (highest priority)
+- `reliability_score`: 0.95
+- `last_health_check`: timestamp
+- `health_status`: "HEALTHY" | "DEGRADED" | "FAILED" | "UNKNOWN"
+- `failure_count`: integer
+- `success_count`: integer
+- `avg_response_time`: float (milliseconds)
+- `rate_limit_remaining`: integer
+- `rate_limit_reset`: timestamp
+- `created_at`: timestamp
+- `updated_at`: timestamp
 
-**Validation Rules**:
-- Requested year must be between 2000 and current year + 1
-- Status must be one of: pending, in_progress, success, failed, cancelled
-- Source attempts must be valid JSON array
-- Retry count must be non-negative integer
+**Methods**:
+- `update_health_status(status)`: Update health status
+- `mark_success()`: Increment success count
+- `mark_failure()`: Increment failure count
+- `update_rate_limit(remaining, reset_time)`: Update rate limit info
+- `is_healthy()`: Check if source is healthy
+- `needs_health_check()`: Check if health check is needed
 
-**State Transitions**:
-- `pending` → `in_progress`: Fetch operation starts
-- `in_progress` → `success`: Data successfully fetched
-- `in_progress` → `failed`: All sources failed
-- `in_progress` → `cancelled`: User cancels operation
-- `failed` → `in_progress`: Retry attempt
-
-### TufeSourceManager (New)
-**Purpose**: Manages source selection, health monitoring, and fallback logic
-
-**Fields**:
-- `id`: Primary key
-- `name`: Manager instance name
-- `active_sources`: JSON array of active source IDs
-- `health_check_interval`: Integer (seconds between health checks)
-- `failure_threshold`: Integer (failures before marking source as failed)
-- `success_threshold`: Integer (successes before marking source as healthy)
-- `max_retry_attempts`: Integer (maximum retry attempts per source)
-- `retry_delay`: Integer (seconds between retry attempts)
-- `created_at`: Timestamp of creation
-- `updated_at`: Timestamp of last update
-
-**Validation Rules**:
-- Health check interval must be between 60 and 3600 seconds
-- Failure threshold must be between 1 and 10
-- Success threshold must be between 1 and 10
-- Max retry attempts must be between 1 and 5
-- Retry delay must be between 1 and 60 seconds
-
-### TufeAutoConfig (New)
-**Purpose**: Manages zero-configuration setup and automatic source discovery
+### TufeDataCache
+**Purpose**: Enhanced caching for OECD API data with TTL
 
 **Fields**:
 - `id`: Primary key
-- `config_name`: Configuration name
-- `auto_discovery_enabled`: Boolean (enable automatic source discovery)
-- `default_priority_order`: JSON array of source priorities
-- `fallback_to_manual`: Boolean (allow fallback to manual entry)
-- `cache_duration_hours`: Integer (cache duration in hours)
-- `validation_enabled`: Boolean (enable data validation)
-- `created_at`: Timestamp of creation
-- `updated_at`: Timestamp of last update
+- `year`: integer (2000-2025)
+- `month`: integer (1-12)
+- `tufe_rate`: float (percentage)
+- `source`: "OECD SDMX API"
+- `cached_at`: timestamp
+- `expires_at`: timestamp (7 days for recent, 30 days for historical)
+- `fetch_duration`: float (milliseconds)
+- `retry_count`: integer
+- `created_at`: timestamp
+- `updated_at`: timestamp
 
-**Validation Rules**:
-- Cache duration must be between 1 and 168 hours (1 week)
-- Default priority order must be valid JSON array
-- All boolean fields must be valid boolean values
+**Methods**:
+- `is_expired()`: Check if cache entry is expired
+- `get_ttl_seconds()`: Get time to live in seconds
+- `mark_fetch_success(duration)`: Update fetch statistics
+- `increment_retry()`: Increment retry count
 
-## Enhanced Existing Entities
+## New Entities
 
-### TufeApiKey (Enhanced)
-**Purpose**: Manages API keys for different TÜFE data sources
+### OECDApiClient
+**Purpose**: Dedicated client for OECD SDMX API integration
 
-**New Fields**:
-- `source_priority`: Integer (priority for this source)
-- `auto_configured`: Boolean (whether key was auto-discovered)
-- `last_used`: Timestamp (when key was last used)
-- `usage_count`: Integer (number of times key was used)
-- `is_valid`: Boolean (whether key is currently valid)
+**Fields**:
+- `base_url`: "https://stats.oecd.org/restsdmx/sdmx.ashx"
+- `timeout`: 30 (seconds)
+- `max_retries`: 3
+- `backoff_factor`: 2.0
+- `jitter_range`: 0.25
 
-### TufeDataCache (Enhanced)
-**Purpose**: Caches TÜFE data with enhanced source tracking
+**Methods**:
+- `fetch_tufe_data(start_year, end_year)`: Fetch TÜFE data for date range
+- `parse_sdmx_xml(xml_content)`: Parse SDMX XML response
+- `handle_rate_limit(response)`: Handle 429 responses
+- `validate_response(response)`: Validate API response
+- `get_rate_limit_info(response)`: Extract rate limit headers
 
-**New Fields**:
-- `source_attempts`: JSON array (sources attempted before cache hit)
-- `fetch_duration`: Float (time taken to fetch data)
-- `validation_status`: Enum (valid, invalid, warning)
-- `data_quality_score`: Float (0.0-1.0, based on validation)
+### RateLimitHandler
+**Purpose**: Manages API rate limiting and backoff
 
-## Relationships
+**Fields**:
+- `max_retries`: 3
+- `base_delay`: 1.0 (seconds)
+- `max_delay`: 60.0 (seconds)
+- `backoff_factor`: 2.0
+- `jitter_range`: 0.25
 
-### TufeDataSource ↔ TufeFetchSession
-- One-to-many: A source can be used in multiple fetch sessions
-- A fetch session can attempt multiple sources
+**Methods**:
+- `should_retry(attempt, response)`: Determine if retry is appropriate
+- `get_delay(attempt)`: Calculate delay for next attempt
+- `add_jitter(delay)`: Add randomization to delay
+- `is_rate_limited(response)`: Check if response indicates rate limiting
 
-### TufeSourceManager ↔ TufeDataSource
-- One-to-many: A manager can manage multiple sources
-- A source can be managed by one manager
+### DataValidator
+**Purpose**: Validates fetched TÜFE data
 
-### TufeAutoConfig ↔ TufeDataSource
-- One-to-many: A config can specify multiple sources
-- A source can be configured by multiple configs
+**Fields**:
+- `min_rate`: 0.0 (percentage)
+- `max_rate`: 200.0 (percentage)
+- `min_year`: 2000
+- `max_year`: current_year + 1
 
-### TufeApiKey ↔ TufeDataSource
-- One-to-one: Each API key belongs to one source
-- Each source can have one API key
+**Methods**:
+- `validate_tufe_rate(rate)`: Validate TÜFE rate value
+- `validate_year(year)`: Validate year value
+- `validate_month(month)`: Validate month value
+- `validate_data_source(source)`: Validate data source
+- `validate_complete_record(year, month, rate, source)`: Validate complete record
+
+## Data Relationships
+
+```
+TufeDataSource (1) ←→ (many) TufeDataCache
+    ↓
+OECDApiClient (uses)
+    ↓
+RateLimitHandler (uses)
+    ↓
+DataValidator (uses)
+```
+
+## Database Schema Updates
+
+### Existing Tables (Enhanced)
+```sql
+-- Add rate limiting fields to tufe_data_sources
+ALTER TABLE tufe_data_sources ADD COLUMN rate_limit_remaining INTEGER DEFAULT NULL;
+ALTER TABLE tufe_data_sources ADD COLUMN rate_limit_reset TIMESTAMP DEFAULT NULL;
+
+-- Add TTL fields to tufe_data_cache
+ALTER TABLE tufe_data_cache ADD COLUMN expires_at TIMESTAMP NOT NULL DEFAULT (datetime('now', '+7 days'));
+ALTER TABLE tufe_data_cache ADD COLUMN fetch_duration REAL DEFAULT NULL;
+ALTER TABLE tufe_data_cache ADD COLUMN retry_count INTEGER DEFAULT 0;
+```
+
+### New Tables
+```sql
+-- Rate limiting configuration
+CREATE TABLE rate_limit_config (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_id INTEGER NOT NULL,
+    max_requests_per_hour INTEGER DEFAULT 100,
+    max_requests_per_day INTEGER DEFAULT 1000,
+    backoff_factor REAL DEFAULT 2.0,
+    max_retries INTEGER DEFAULT 3,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (source_id) REFERENCES tufe_data_sources (id)
+);
+
+-- API request logs
+CREATE TABLE api_request_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_id INTEGER NOT NULL,
+    endpoint TEXT NOT NULL,
+    method TEXT DEFAULT 'GET',
+    status_code INTEGER,
+    response_time REAL,
+    rate_limit_remaining INTEGER,
+    rate_limit_reset TIMESTAMP,
+    error_message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (source_id) REFERENCES tufe_data_sources (id)
+);
+```
 
 ## Data Validation Rules
 
 ### TÜFE Rate Validation
-- Must be between 0.0 and 100.0 percent
-- Must be reasonable compared to historical data
-- Must be from official sources only
+- **Range**: 0.0% ≤ rate ≤ 200.0%
+- **Format**: Float with 2 decimal places
+- **Required**: Yes
 
-### Source Reliability Validation
-- Reliability score must be updated after each fetch attempt
-- Health status must be updated based on recent performance
-- Priority must be maintained based on reliability
+### Year Validation
+- **Range**: 2000 ≤ year ≤ current_year + 1
+- **Format**: Integer
+- **Required**: Yes
 
-### Session Validation
-- Fetch sessions must have valid status transitions
-- Source attempts must be recorded with timestamps
-- Error messages must be descriptive and actionable
+### Month Validation
+- **Range**: 1 ≤ month ≤ 12
+- **Format**: Integer
+- **Required**: Yes
+
+### Data Source Validation
+- **Format**: Non-empty string
+- **Required**: Yes
+- **Allowed values**: "OECD SDMX API"
+
+## Caching Strategy
+
+### Cache TTL Rules
+- **Recent data** (current year): 7 days
+- **Historical data** (previous years): 30 days
+- **Failed requests**: 1 hour (to avoid repeated failures)
+
+### Cache Key Strategy
+- **Primary key**: (year, month)
+- **Secondary key**: source
+- **Composite key**: (year, month, source)
+
+### Cache Invalidation
+- **Automatic**: Based on TTL expiration
+- **Manual**: User-triggered refresh
+- **Error-based**: Failed requests expire quickly
+
+## Error Handling
+
+### API Error Types
+1. **Network errors**: Timeout, connection refused
+2. **HTTP errors**: 429 (rate limited), 500 (server error)
+3. **Data errors**: Invalid XML, missing data
+4. **Validation errors**: Invalid TÜFE values
+
+### Error Recovery
+1. **Retry with backoff**: For transient errors
+2. **Fallback to cache**: For rate limiting
+3. **Manual entry**: For persistent failures
+4. **User notification**: Clear error messages
 
 ## Performance Considerations
 
-### Indexing Strategy
-- Index on `TufeDataSource.priority` for fast source selection
-- Index on `TufeDataSource.health_status` for health filtering
-- Index on `TufeFetchSession.status` for session monitoring
-- Index on `TufeDataCache.year` for cache lookups
+### API Call Optimization
+- **Batch requests**: Fetch multiple years in single call
+- **Incremental updates**: Only fetch new data
+- **Smart caching**: Avoid redundant requests
 
-### Caching Strategy
-- Cache source health status for 5 minutes
-- Cache successful fetch results for 24 hours
-- Cache failed fetch attempts for 1 hour
-- Cache source reliability scores for 1 hour
+### Database Optimization
+- **Indexes**: On (year, month) and expires_at
+- **Cleanup**: Regular removal of expired entries
+- **Connection pooling**: Reuse database connections
 
-### Data Retention
-- Keep fetch sessions for 30 days
-- Keep source health history for 7 days
-- Keep API key usage logs for 90 days
-- Keep cache entries until expiration
-
-## Security Considerations
-
-### API Key Management
-- API keys are encrypted at rest
-- API keys are masked in logs and UI
-- API keys are validated before use
-- API keys are rotated based on usage patterns
-
-### Data Validation
-- All fetched data is validated before storage
-- Source attribution is maintained for audit trails
-- Error messages don't expose sensitive information
-- Rate limiting prevents abuse
-
-### Access Control
-- Source management requires appropriate permissions
-- Fetch sessions are isolated by user context
-- Configuration changes are logged and audited
-- Health check results are monitored for anomalies
+### Memory Management
+- **Streaming**: Parse large XML responses incrementally
+- **Cleanup**: Clear temporary data after processing
+- **Monitoring**: Track memory usage during operations

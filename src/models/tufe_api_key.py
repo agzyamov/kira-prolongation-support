@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 @dataclass
 class TufeApiKey:
-    """Model for TÜFE API keys."""
+    """Enhanced model for TÜFE API keys with auto-configuration support."""
     
     id: Optional[int] = None
     key_name: str = ""
@@ -19,6 +19,12 @@ class TufeApiKey:
     created_at: Optional[datetime] = None
     last_used: Optional[datetime] = None
     is_active: bool = True
+    
+    # Enhanced fields for auto-configuration
+    source_priority: int = 5  # Priority for this source (1-10)
+    auto_configured: bool = False  # Whether key was auto-discovered
+    usage_count: int = 0  # Number of times key was used
+    is_valid: bool = True  # Whether key is currently valid
     
     def __post_init__(self):
         """Validate the API key after initialization."""
@@ -37,6 +43,19 @@ class TufeApiKey:
         
         if not isinstance(self.is_active, bool):
             raise ValueError("is_active must be a boolean")
+        
+        # Enhanced validation for new fields
+        if not (1 <= self.source_priority <= 10):
+            raise ValueError("source_priority must be between 1 and 10")
+        
+        if not isinstance(self.auto_configured, bool):
+            raise ValueError("auto_configured must be a boolean")
+        
+        if self.usage_count < 0:
+            raise ValueError("usage_count must be non-negative")
+        
+        if not isinstance(self.is_valid, bool):
+            raise ValueError("is_valid must be a boolean")
     
     def to_dict(self) -> dict:
         """Convert the API key to a dictionary."""
@@ -47,7 +66,12 @@ class TufeApiKey:
             'source_id': self.source_id,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'last_used': self.last_used.isoformat() if self.last_used else None,
-            'is_active': self.is_active
+            'is_active': self.is_active,
+            # Enhanced fields
+            'source_priority': self.source_priority,
+            'auto_configured': self.auto_configured,
+            'usage_count': self.usage_count,
+            'is_valid': self.is_valid
         }
     
     @classmethod
@@ -73,7 +97,12 @@ class TufeApiKey:
             source_id=data['source_id'],
             created_at=created_at,
             last_used=last_used,
-            is_active=data.get('is_active', True)
+            is_active=data.get('is_active', True),
+            # Enhanced fields
+            source_priority=data.get('source_priority', 5),
+            auto_configured=data.get('auto_configured', False),
+            usage_count=data.get('usage_count', 0),
+            is_valid=data.get('is_valid', True)
         )
     
     @staticmethod
@@ -96,6 +125,7 @@ class TufeApiKey:
         if used_at is None:
             used_at = datetime.now()
         self.last_used = used_at
+        self.usage_count += 1
     
     def activate(self):
         """Activate the API key."""
@@ -140,6 +170,38 @@ class TufeApiKey:
             return "*" * len(self.api_key)
         
         return self.api_key[:4] + "*" * (len(self.api_key) - 8) + self.api_key[-4:]
+    
+    # Enhanced methods for auto-configuration
+    
+    def mark_as_auto_configured(self):
+        """Mark the API key as auto-configured."""
+        self.auto_configured = True
+    
+    def mark_as_manually_configured(self):
+        """Mark the API key as manually configured."""
+        self.auto_configured = False
+    
+    def update_priority(self, priority: int):
+        """Update the source priority."""
+        if not (1 <= priority <= 10):
+            raise ValueError("source_priority must be between 1 and 10")
+        self.source_priority = priority
+    
+    def mark_as_valid(self):
+        """Mark the API key as valid."""
+        self.is_valid = True
+    
+    def mark_as_invalid(self):
+        """Mark the API key as invalid."""
+        self.is_valid = False
+    
+    def reset_usage_count(self):
+        """Reset the usage count."""
+        self.usage_count = 0
+    
+    def is_frequently_used(self, min_usage: int = 10) -> bool:
+        """Check if the API key is frequently used."""
+        return self.usage_count >= min_usage
     
     def __str__(self) -> str:
         """String representation of the API key."""
