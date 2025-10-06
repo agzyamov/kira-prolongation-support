@@ -714,12 +714,166 @@ class DataStore:
         return TufeDataCache(
             id=row['id'],
             year=row['year'],
+            month=row.get('month', 1),  # Add month field
             tufe_rate=Decimal(str(row['tufe_rate'])),
             source_name=row['source_name'],
             fetched_at=datetime.fromisoformat(row['fetched_at']) if row['fetched_at'] else None,
             expires_at=datetime.fromisoformat(row['expires_at']) if row['expires_at'] else None,
             api_response=row['api_response'],
             is_validated=bool(row['is_validated']),
-            created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None
+            created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None,
+            # Enhanced TTL fields
+            fetch_duration=row.get('fetch_duration'),
+            retry_count=row.get('retry_count', 0),
+            cache_hit_count=row.get('cache_hit_count', 0),
+            last_accessed=datetime.fromisoformat(row['last_accessed']) if row.get('last_accessed') else None
         )
+    
+    # Enhanced TÜFE methods for OECD API integration
+    
+    def get_tufe_data_cache_by_year_month(self, year: int, month: int) -> Optional[sqlite3.Row]:
+        """Get TÜFE data cache by year and month."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM tufe_data_cache 
+                WHERE year = ? AND month = ?
+                ORDER BY created_at DESC
+                LIMIT 1
+            """, (year, month))
+            return cursor.fetchone()
+    
+    def update_tufe_data_cache(self, cache_entry: TufeDataCache) -> bool:
+        """Update TÜFE data cache entry."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE tufe_data_cache SET
+                        year = ?, month = ?, tufe_rate = ?, source_name = ?,
+                        fetched_at = ?, expires_at = ?, api_response = ?,
+                        is_validated = ?, fetch_duration = ?, retry_count = ?,
+                        cache_hit_count = ?, last_accessed = ?
+                    WHERE id = ?
+                """, (
+                    cache_entry.year, cache_entry.month, float(cache_entry.tufe_rate),
+                    cache_entry.source_name,
+                    cache_entry.fetched_at.isoformat() if cache_entry.fetched_at else None,
+                    cache_entry.expires_at.isoformat() if cache_entry.expires_at else None,
+                    cache_entry.api_response, cache_entry.is_validated,
+                    cache_entry.fetch_duration, cache_entry.retry_count,
+                    cache_entry.cache_hit_count,
+                    cache_entry.last_accessed.isoformat() if cache_entry.last_accessed else None,
+                    cache_entry.id
+                ))
+                conn.commit()
+                return cursor.rowcount > 0
+        except Exception as e:
+            raise DatabaseError(f"Failed to update TÜFE data cache: {e}")
+    
+    def delete_tufe_data_cache(self, cache_id: int) -> bool:
+        """Delete TÜFE data cache entry."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM tufe_data_cache WHERE id = ?", (cache_id,))
+                conn.commit()
+                return cursor.rowcount > 0
+        except Exception as e:
+            raise DatabaseError(f"Failed to delete TÜFE data cache: {e}")
+    
+    def get_expired_tufe_data_cache(self) -> List[sqlite3.Row]:
+        """Get all expired TÜFE data cache entries."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM tufe_data_cache 
+                WHERE expires_at < datetime('now')
+                ORDER BY expires_at ASC
+            """)
+            return cursor.fetchall()
+    
+    def cleanup_expired_tufe_data_cache(self) -> int:
+        """Clean up expired TÜFE data cache entries."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    DELETE FROM tufe_data_cache 
+                    WHERE expires_at < datetime('now')
+                """)
+                conn.commit()
+                return cursor.rowcount
+        except Exception as e:
+            raise DatabaseError(f"Failed to cleanup expired TÜFE data cache: {e}")
+    
+    def get_tufe_data_cache_statistics(self) -> dict:
+        """Get TÜFE data cache statistics."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            # Total entries
+            cursor.execute("SELECT COUNT(*) as total FROM tufe_data_cache")
+            total = cursor.fetchone()['total']
+            
+            # Expired entries
+            cursor.execute("""
+                SELECT COUNT(*) as expired FROM tufe_data_cache 
+                WHERE expires_at < datetime('now')
+            """)
+            expired = cursor.fetchone()['expired']
+            
+            # Active entries
+            active = total - expired
+            
+            # Total cache hits
+            cursor.execute("SELECT SUM(cache_hit_count) as total_hits FROM tufe_data_cache")
+            total_hits = cursor.fetchone()['total_hits'] or 0
+            
+            # Average fetch duration
+            cursor.execute("SELECT AVG(fetch_duration) as avg_duration FROM tufe_data_cache WHERE fetch_duration IS NOT NULL")
+            avg_duration = cursor.fetchone()['avg_duration'] or 0.0
+            
+            return {
+                'total_entries': total,
+                'expired_entries': expired,
+                'active_entries': active,
+                'total_hits': total_hits,
+                'avg_fetch_duration': avg_duration,
+                'hit_rate': (total_hits / total) if total > 0 else 0.0
+            }
+    
+    def get_tufe_data_cache_by_source(self, source_name: str) -> List[sqlite3.Row]:
+        """Get TÜFE data cache entries by source."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT * FROM tufe_data_cache 
+                WHERE source_name = ?
+                ORDER BY year DESC, month DESC
+            """, (source_name,))
+            return cursor.fetchall()
+    
+    def get_tufe_data_cache_year_range(self) -> dict:
+        """Get year range of cached TÜFE data."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT MIN(year) as min_year, MAX(year) as max_year, 
+                       COUNT(DISTINCT year) as year_count
+                FROM tufe_data_cache
+            """)
+            result = cursor.fetchone()
+            
+            return {
+                'min_year': result['min_year'],
+                'max_year': result['max_year'],
+                'year_count': result['year_count']
+            }
 

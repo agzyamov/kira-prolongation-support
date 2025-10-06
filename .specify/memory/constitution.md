@@ -1,17 +1,17 @@
 <!--
 Sync Impact Report:
-Version change: v1.5.0 → v1.6.0
+Version change: v1.6.0 → v1.7.0
 Changes:
-  - Enhanced Principle VIII: Phase-Based Commits with enforcement mechanisms
+  - Added Principle IX: Brief Documentation Only
   - No existing principles modified
 Added sections:
-  - Enhanced Principle VIII with enforcement
+  - Principle IX: Brief Documentation Only
 Removed sections:
   - None
 Templates requiring updates:
-  ✅ .specify/templates/plan-template.md - no changes needed (phase commits not applicable to planning)
-  ✅ .specify/templates/spec-template.md - no changes needed (spec creation not affected by phase commits)
-  ✅ .specify/templates/tasks-template.md - no changes needed (task execution not affected by phase commits)
+  ✅ .specify/templates/plan-template.md - no changes needed (documentation principle not applicable to planning)
+  ✅ .specify/templates/spec-template.md - no changes needed (spec creation not affected by documentation principle)
+  ✅ .specify/templates/tasks-template.md - no changes needed (task execution not affected by documentation principle)
 Follow-up TODOs: None
 -->
 
@@ -57,6 +57,11 @@ MUST commit implementation work after completing each phase (Setup, Tests, Core 
 
 **Rationale**: Phase-based commits provide natural checkpoints during development, making it easier to track progress, debug issues, and collaborate. They also ensure that working states are preserved even if later phases encounter problems, reducing the risk of losing completed work. Enforcement prevents accumulation of uncommitted changes that could lead to data loss or debugging difficulties.
 
+### IX. Brief Documentation Only
+MUST create only brief, essential documentation that serves end users and human developers without being annoying or overwhelming. Focus on practical usage examples, quick start guides, and essential technical details. Avoid verbose explanations, excessive examples, or documentation that reads like a novel.
+
+**Rationale**: Developers and users are busy and want to get things done quickly. Overly detailed documentation becomes a maintenance burden and often goes unread. Brief, focused documentation is more likely to be used and kept up-to-date, providing better value to the project.
+
 ## Governance
 
 This is a personal project. These principles are guidelines, not laws. Change them whenever they stop being helpful.
@@ -66,4 +71,4 @@ This is a personal project. These principles are guidelines, not laws. Change th
 - A principle becomes annoying instead of helpful
 - You learn something that changes your approach
 
-**Version**: 1.6.0 | **Ratified**: 2025-10-05 | **Last Amended**: 2025-10-05
+**Version**: 1.7.0 | **Ratified**: 2025-10-05 | **Last Amended**: 2025-01-27

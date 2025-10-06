@@ -33,7 +33,10 @@ import io
 
 from src.models import InflationData
 from src.storage import DataStore
-from src.services.exceptions import CSVParseError, TufeApiError
+from src.services.exceptions import CSVParseError, TufeApiError, TufeValidationError
+from src.services.oecd_api_client import OECDApiClient
+from src.services.rate_limit_handler import RateLimitHandler
+from src.services.data_validator import DataValidator
 from src.utils import validate_month, validate_year
 
 
@@ -51,6 +54,11 @@ class InflationService:
             data_store: DataStore instance for persistence
         """
         self.data_store = data_store
+        
+        # Initialize OECD API components
+        self.oecd_client = OECDApiClient()
+        self.rate_limit_handler = RateLimitHandler()
+        self.data_validator = DataValidator()
     
     def import_from_csv(self, csv_content: str) -> int:
         """
@@ -447,4 +455,158 @@ class InflationService:
             return cache_service.is_cache_valid(year)
         except Exception as e:
             raise TufeApiError(f"Failed to check TÜFE cache validity: {e}")
+    
+    # OECD API Integration Methods
+    
+    def fetch_tufe_from_oecd_api(self, start_year: int, end_year: int) -> List[InflationData]:
+        """
+        Fetch TÜFE data from OECD API for specified year range.
+        
+        Args:
+            start_year: Starting year (2000-2025)
+            end_year: Ending year (2000-2025)
+        
+        Returns:
+            List of InflationData objects with TÜFE rates
+        
+        Raises:
+            TufeApiError: If API request fails
+            TufeValidationError: If data validation fails
+        """
+        try:
+            # Fetch data from OECD API
+            api_result = self.oecd_client.fetch_tufe_data(start_year, end_year)
+            
+            # Convert to InflationData objects
+            inflation_data = []
+            for item in api_result.get('items', []):
+                try:
+                    # Validate the data
+                    self.data_validator.validate_complete_record(
+                        item['year'], item['month'], item['value'], 'OECD SDMX API'
+                    )
+                    
+                    # Create InflationData object
+                    inflation_item = InflationData(
+                        year=item['year'],
+                        month=item['month'],
+                        tufe_rate=Decimal(str(item['value'])),
+                        source='OECD SDMX API'
+                    )
+                    inflation_data.append(inflation_item)
+                    
+                except TufeValidationError as e:
+                    # Skip invalid data points
+                    continue
+            
+            return inflation_data
+            
+        except Exception as e:
+            raise TufeApiError(f"Failed to fetch TÜFE data from OECD API: {e}")
+    
+    def fetch_and_cache_oecd_tufe_data(self, start_year: int, end_year: int) -> List[InflationData]:
+        """
+        Fetch TÜFE data from OECD API and cache it.
+        
+        Args:
+            start_year: Starting year (2000-2025)
+            end_year: Ending year (2000-2025)
+        
+        Returns:
+            List of InflationData objects with TÜFE rates
+        """
+        try:
+            # Fetch data from OECD API
+            inflation_data = self.fetch_tufe_from_oecd_api(start_year, end_year)
+            
+            # Cache the data
+            self.cache_oecd_tufe_data(inflation_data)
+            
+            return inflation_data
+            
+        except Exception as e:
+            raise TufeApiError(f"Failed to fetch and cache OECD TÜFE data: {e}")
+    
+    def cache_oecd_tufe_data(self, inflation_data: List[InflationData]) -> None:
+        """
+        Cache OECD TÜFE data.
+        
+        Args:
+            inflation_data: List of InflationData objects to cache
+        """
+        try:
+            from src.services.tufe_cache_service import TufeCacheService
+            cache_service = TufeCacheService(self.data_store)
+            cache_service.cache_oecd_data(inflation_data, ttl_hours=168)  # 7 days
+        except Exception as e:
+            raise TufeApiError(f"Failed to cache OECD TÜFE data: {e}")
+    
+    def get_cached_oecd_tufe_data(self, year: int, month: int = None) -> Optional[InflationData]:
+        """
+        Get cached OECD TÜFE data.
+        
+        Args:
+            year: Year to retrieve
+            month: Month to retrieve (optional)
+        
+        Returns:
+            InflationData object or None if not found
+        """
+        try:
+            from src.services.tufe_cache_service import TufeCacheService
+            cache_service = TufeCacheService(self.data_store)
+            return cache_service.get_cached_oecd_data(year, month)
+        except Exception as e:
+            raise TufeApiError(f"Failed to get cached OECD TÜFE data: {e}")
+    
+    def is_oecd_api_healthy(self) -> bool:
+        """
+        Check if OECD API is healthy.
+        
+        Returns:
+            True if API is healthy, False otherwise
+        """
+        try:
+            return self.oecd_client.is_healthy()
+        except Exception:
+            return False
+    
+    def get_oecd_api_info(self) -> dict:
+        """
+        Get OECD API information.
+        
+        Returns:
+            Dictionary with API information
+        """
+        try:
+            return self.oecd_client.get_api_info()
+        except Exception as e:
+            raise TufeApiError(f"Failed to get OECD API info: {e}")
+    
+    def get_rate_limit_status(self) -> dict:
+        """
+        Get rate limit status.
+        
+        Returns:
+            Dictionary with rate limit status
+        """
+        try:
+            return self.rate_limit_handler.get_rate_limit_status()
+        except Exception as e:
+            raise TufeApiError(f"Failed to get rate limit status: {e}")
+    
+    def validate_oecd_data(self, data: List[dict]) -> List[dict]:
+        """
+        Validate OECD data.
+        
+        Args:
+            data: List of data records to validate
+        
+        Returns:
+            List of valid records
+        """
+        try:
+            return self.data_validator.validate_batch_data(data)
+        except Exception as e:
+            raise TufeValidationError(f"Failed to validate OECD data: {e}")
 

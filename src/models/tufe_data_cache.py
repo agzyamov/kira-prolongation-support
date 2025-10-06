@@ -10,10 +10,11 @@ from dataclasses import dataclass
 
 @dataclass
 class TufeDataCache:
-    """Model for TÜFE data cache."""
+    """Enhanced model for TÜFE data cache with TTL support."""
     
     id: Optional[int] = None
     year: int = 0
+    month: int = 1  # Added month field
     tufe_rate: Decimal = Decimal("0.00")
     source_name: str = ""
     fetched_at: datetime = None
@@ -21,6 +22,12 @@ class TufeDataCache:
     api_response: str = ""
     is_validated: bool = False
     created_at: Optional[datetime] = None
+    
+    # Enhanced TTL fields
+    fetch_duration: Optional[float] = None  # Time taken to fetch data in seconds
+    retry_count: int = 0  # Number of retries for this cache entry
+    cache_hit_count: int = 0  # Number of times this entry was accessed
+    last_accessed: Optional[datetime] = None  # Last time this entry was accessed
     
     def __post_init__(self):
         """Validate the cache entry after initialization."""
@@ -35,6 +42,9 @@ class TufeDataCache:
         if not (2000 <= self.year <= 2100):
             raise ValueError("year must be between 2000 and 2100")
         
+        if not (1 <= self.month <= 12):
+            raise ValueError("month must be between 1 and 12")
+        
         if self.tufe_rate < 0:
             raise ValueError("tufe_rate must be non-negative")
         
@@ -43,6 +53,15 @@ class TufeDataCache:
         
         if not isinstance(self.is_validated, bool):
             raise ValueError("is_validated must be a boolean")
+        
+        if self.fetch_duration is not None and self.fetch_duration < 0:
+            raise ValueError("fetch_duration must be non-negative")
+        
+        if self.retry_count < 0:
+            raise ValueError("retry_count must be non-negative")
+        
+        if self.cache_hit_count < 0:
+            raise ValueError("cache_hit_count must be non-negative")
     
     def to_dict(self) -> dict:
         """Convert the cache entry to a dictionary."""
@@ -130,6 +149,37 @@ class TufeDataCache:
     def get_source_attribution(self) -> str:
         """Get formatted source attribution string."""
         return f"Data source: {self.source_name}"
+    
+    def is_ttl_expired(self) -> bool:
+        """Check if the TTL has expired."""
+        return self.is_expired()
+    
+    def get_ttl_remaining(self) -> timedelta:
+        """Get remaining TTL time."""
+        if self.expires_at:
+            remaining = self.expires_at - datetime.now()
+            return max(timedelta(0), remaining)
+        return timedelta(0)
+    
+    def extend_ttl(self, hours: int) -> None:
+        """Extend the TTL by specified hours."""
+        self.extend_expiration(hours)
+    
+    def mark_accessed(self) -> None:
+        """Mark this cache entry as accessed."""
+        self.cache_hit_count += 1
+        self.last_accessed = datetime.now()
+    
+    def get_cache_efficiency(self) -> float:
+        """Get cache efficiency score (hits per hour)."""
+        if not self.fetched_at or self.cache_hit_count == 0:
+            return 0.0
+        
+        hours_since_fetch = (datetime.now() - self.fetched_at).total_seconds() / 3600
+        if hours_since_fetch == 0:
+            return 0.0
+        
+        return self.cache_hit_count / hours_since_fetch
     
     def get_data_lineage(self) -> str:
         """Get formatted data lineage string."""

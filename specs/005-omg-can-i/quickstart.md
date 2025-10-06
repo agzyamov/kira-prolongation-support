@@ -241,6 +241,78 @@ except TufeApiError as e:
     print(f"Retry After: {e.details.get('retry_after', 'N/A')} seconds")
 ```
 
+### Programmatic Usage
+
+#### Direct Service Usage
+```python
+from src.services.inflation_service import InflationService
+from src.services.oecd_api_client import OECDApiClient
+from src.services.rate_limit_handler import RateLimitHandler
+from src.services.data_validator import DataValidator
+from src.storage.data_store import DataStore
+
+# Initialize services
+data_store = DataStore()
+oecd_client = OECDApiClient()
+rate_limit_handler = RateLimitHandler()
+validator = DataValidator()
+
+inflation_service = InflationService(
+    data_store=data_store,
+    oecd_client=oecd_client,
+    rate_limit_handler=rate_limit_handler,
+    validator=validator
+)
+
+# Fetch and cache data
+data = inflation_service.fetch_and_cache_oecd_tufe_data(2020, 2020)
+print(f"Fetched {len(data)} TÜFE data points")
+```
+
+#### Rate Limit Monitoring
+```python
+# Check rate limit status
+status = inflation_service.get_rate_limit_status()
+if status['can_make_request']:
+    print("✅ Requests allowed")
+    print(f"Remaining: {status['remaining_hour']} per hour")
+else:
+    print("⚠️ Rate limited")
+    print(f"Message: {status['message']}")
+```
+
+#### API Health Monitoring
+```python
+# Check API health
+if inflation_service.is_oecd_api_healthy():
+    print("✅ OECD API is healthy")
+else:
+    print("❌ OECD API is not accessible")
+```
+
+#### Cache Statistics
+```python
+# Get detailed cache statistics
+stats = inflation_service.get_cache_statistics()
+print(f"Total entries: {stats['total_entries']}")
+print(f"Active entries: {stats['active_entries']}")
+print(f"Expired entries: {stats['expired_entries']}")
+print(f"Hit rate: {stats['hit_rate']:.2%}")
+print(f"Average fetch duration: {stats['avg_fetch_duration']:.2f}s")
+```
+
+#### Data Validation
+```python
+# Validate data before processing
+raw_data = [
+    {"year": 2020, "month": 1, "value": 10.5, "source": "OECD SDMX API"},
+    {"year": 2020, "month": 2, "value": 11.0, "source": "OECD SDMX API"}
+]
+
+validated_data = inflation_service.validate_oecd_data(raw_data)
+print(f"Validated {len(validated_data)} records")
+```
+
 ## Support
 
 For issues or questions:

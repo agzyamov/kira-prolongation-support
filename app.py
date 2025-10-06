@@ -35,6 +35,9 @@ from src.services import (
     TCMBApiClient,
     TufeConfigService
 )
+from src.services.oecd_api_client import OECDApiClient
+from src.services.rate_limit_handler import RateLimitHandler
+from src.services.data_validator import DataValidator
 from src.models import RentalAgreement
 from src.utils import ChartGenerator
 
@@ -79,7 +82,12 @@ def init_services():
         'tufe_api_key_service': TufeApiKeyService(data_store),          # Manages API keys securely
         'tufe_cache_service': TufeCacheService(data_store),             # Manages TÜFE data caching
         'tufe_config_service': TufeConfigService(),                     # Manages TÜFE configuration
-        'tcmb_api_client': None  # Will be initialized with actual API key when needed
+        'tcmb_api_client': None,  # Will be initialized with actual API key when needed
+        
+        # OECD API services for easy TÜFE data fetching
+        'oecd_api_client': OECDApiClient(),                             # OECD SDMX API client
+        'rate_limit_handler': RateLimitHandler(),                       # Rate limiting handler
+        'data_validator': DataValidator()                               # Data validation service
     }
 
 services = init_services()
@@ -716,6 +724,155 @@ elif page == "📊 Inflation Data":
                             st.error(f"Full error: {traceback.format_exc()}")
                     else:
                         st.error("❌ Please enter an API key")
+    
+    # OECD API Integration
+    st.markdown("---")
+    st.subheader("🌍 OECD API Integration")
+    
+    # Documentation for OECD API integration
+    with st.expander("ℹ️ About OECD API Integration"):
+        st.markdown("""
+        **OECD SDMX API Integration**
+        
+        This section provides easy access to Turkish inflation (TÜFE) data from the 
+        Organisation for Economic Co-operation and Development (OECD) API.
+        
+        **Features:**
+        - 🚀 **One-Click Fetching**: Get TÜFE data with a single button click
+        - 📊 **Official Data**: Access to official OECD Turkish CPI data
+        - ⚡ **Smart Caching**: Automatic caching with TTL for optimal performance
+        - 🔄 **Rate Limiting**: Respects OECD API rate limits automatically
+        - 🛡️ **Error Handling**: Graceful fallback to manual entry if needed
+        - 📈 **Data Validation**: Ensures data quality before storage
+        
+        **Data Source**: OECD SDMX API - Turkish Consumer Price Index (CPI)
+        **Update Frequency**: Monthly data available
+        **Coverage**: Historical data from 2000 to present
+        
+        **Note**: This is a free, public API that doesn't require authentication.
+        """)
+    
+    # OECD API Status
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.write("**OECD API Status**")
+        try:
+            is_healthy = services['oecd_api_client'].is_healthy()
+            if is_healthy:
+                st.success("✅ OECD API is healthy and accessible")
+            else:
+                st.warning("⚠️ OECD API is not accessible")
+        except Exception as e:
+            st.error(f"❌ Error checking OECD API status: {e}")
+    
+    with col2:
+        st.write("**Rate Limit Status**")
+        try:
+            rate_limit_status = services['rate_limit_handler'].get_rate_limit_status()
+            can_make_request = rate_limit_status.get('can_make_request', True)
+            if can_make_request:
+                st.success("✅ Rate limit OK - requests allowed")
+            else:
+                st.warning("⚠️ Rate limited - please wait")
+        except Exception as e:
+            st.error(f"❌ Error checking rate limit: {e}")
+    
+    # OECD API Actions
+    st.markdown("---")
+    st.subheader("🎯 OECD API Actions")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.write("**Fetch TÜFE Data**")
+        current_year = datetime.now().year
+        
+        if st.button("🚀 Fetch TÜFE from OECD API", key="oecd_fetch_current"):
+            with st.spinner("Fetching TÜFE data from OECD API..."):
+                try:
+                    # Fetch data for current year
+                    inflation_data = services['inflation_service'].fetch_and_cache_oecd_tufe_data(
+                        current_year, current_year
+                    )
+                    
+                    if inflation_data:
+                        st.success(f"✅ Successfully fetched {len(inflation_data)} TÜFE data points for {current_year}")
+                        
+                        # Show the data
+                        for item in inflation_data:
+                            st.write(f"📊 {item.year}-{item.month:02d}: {item.tufe_rate}%")
+                    else:
+                        st.warning("⚠️ No TÜFE data found for the current year")
+                        
+                except Exception as e:
+                    st.error(f"❌ Error fetching from OECD API: {e}")
+                    st.info("💡 You can still enter TÜFE data manually below")
+    
+    with col2:
+        st.write("**Fetch Historical Data**")
+        
+        # Year range selector
+        start_year = st.number_input(
+            "Start Year", 
+            min_value=2000, 
+            max_value=current_year, 
+            value=current_year-1,
+            key="oecd_start_year"
+        )
+        end_year = st.number_input(
+            "End Year", 
+            min_value=start_year, 
+            max_value=current_year, 
+            value=current_year,
+            key="oecd_end_year"
+        )
+        
+        if st.button("📈 Fetch Historical TÜFE", key="oecd_fetch_historical"):
+            with st.spinner(f"Fetching TÜFE data for {start_year}-{end_year}..."):
+                try:
+                    inflation_data = services['inflation_service'].fetch_and_cache_oecd_tufe_data(
+                        start_year, end_year
+                    )
+                    
+                    if inflation_data:
+                        st.success(f"✅ Successfully fetched {len(inflation_data)} TÜFE data points")
+                        
+                        # Show summary
+                        years_covered = set(item.year for item in inflation_data)
+                        st.write(f"📊 Years covered: {sorted(years_covered)}")
+                    else:
+                        st.warning("⚠️ No TÜFE data found for the selected period")
+                        
+                except Exception as e:
+                    st.error(f"❌ Error fetching historical data: {e}")
+    
+    with col3:
+        st.write("**Cache Management**")
+        
+        if st.button("🗄️ View Cache Statistics", key="oecd_cache_stats"):
+            try:
+                cache_stats = services['tufe_cache_service'].get_cache_statistics()
+                
+                st.write("**Cache Statistics:**")
+                st.write(f"📊 Total entries: {cache_stats['total_entries']}")
+                st.write(f"✅ Active entries: {cache_stats['active_entries']}")
+                st.write(f"⏰ Expired entries: {cache_stats['expired_entries']}")
+                st.write(f"🎯 Total hits: {cache_stats['total_hits']}")
+                st.write(f"📈 Hit rate: {cache_stats['hit_rate']:.2%}")
+                st.write(f"⚡ Avg fetch duration: {cache_stats['avg_fetch_duration']:.2f}s")
+                st.write(f"🔧 Cache efficiency: {cache_stats['cache_efficiency']:.2f}")
+                
+            except Exception as e:
+                st.error(f"❌ Error getting cache statistics: {e}")
+        
+        if st.button("🧹 Cleanup Expired Cache", key="oecd_cleanup"):
+            with st.spinner("Cleaning up expired cache entries..."):
+                try:
+                    cleaned_count = services['tufe_cache_service'].cleanup_expired_cache()
+                    st.success(f"✅ Cleaned up {cleaned_count} expired cache entries")
+                except Exception as e:
+                    st.error(f"❌ Error cleaning cache: {e}")
     
     # TÜFE Data Handling
     # NEW FEATURE: TÜFE Data Handling
